@@ -9,7 +9,8 @@ import {
 import Papa from 'papaparse'
 import {
   Upload, Plus, Users, ChevronDown,
-  FileText, Star, Trash2, BarChart2, Settings, UserPlus
+  FileText, Star, Trash2, BarChart2,
+  Settings, UserPlus, RefreshCw, X, Check
 } from 'lucide-react'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -68,8 +69,6 @@ const DEFAULT_GOALS: MemberGoals = {
 }
 
 const STORAGE_KEY = 'fbf-dashboard-v1'
-
-// Design tokens
 const BRAND = '#7C2D2D'
 const BRAND_LIGHT = '#F5EDED'
 
@@ -203,33 +202,46 @@ function SectionLabel({ children }: { children: string }) {
   )
 }
 
-function NavItem({ label, active, onClick, icon }: {
+function NavItem({ label, active, onClick, icon, onDelete }: {
   label: string
   active: boolean
   onClick: () => void
   icon: React.ReactNode
+  onDelete?: () => void
 }) {
+  const [hovered, setHovered] = useState(false)
   return (
-    <button
-      onClick={onClick}
-      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors text-left"
-      style={active
-        ? { backgroundColor: BRAND, color: 'white' }
-        : { color: '#44403C' }
-      }
+    <div
+      className="relative group"
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
     >
-      <span className={active ? 'opacity-90' : 'opacity-50'}>{icon}</span>
-      {label}
-    </button>
+      <button
+        onClick={onClick}
+        className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors text-left pr-7"
+        style={active ? { backgroundColor: BRAND, color: 'white' } : { color: '#44403C' }}
+      >
+        <span className={active ? 'opacity-90' : 'opacity-50'}>{icon}</span>
+        <span className="truncate">{label}</span>
+      </button>
+      {onDelete && hovered && (
+        <button
+          onClick={e => { e.stopPropagation(); onDelete() }}
+          className="absolute right-2 top-1/2 -translate-y-1/2 w-5 h-5 rounded flex items-center justify-center text-[#C7BFB8] hover:text-red-400 hover:bg-red-50 transition-colors"
+          title="Remove member"
+        >
+          <X className="w-3 h-3" />
+        </button>
+      )}
+    </div>
   )
 }
 
-function StatCard({ label, value, sub, trend, accent = false }: {
+function StatCard({ label, value, sub, trend }: {
   label: string
   value: string
   sub?: string
   trend?: { text: string; positive: boolean } | null
-  accent?: boolean
 }) {
   return (
     <div className="bg-white rounded-xl border border-[#EDE9E4] p-5">
@@ -240,9 +252,7 @@ function StatCard({ label, value, sub, trend, accent = false }: {
           {trend.positive ? '↑' : '↓'} {trend.text}
         </p>
       )}
-      {sub && (
-        <p className="text-[11px] text-[#A8A29E] leading-snug">{sub}</p>
-      )}
+      {sub && <p className="text-[11px] text-[#A8A29E] leading-snug">{sub}</p>}
     </div>
   )
 }
@@ -262,28 +272,21 @@ function GoalBar({ label, current, goal, pace }: {
         bg: pct >= 100 ? '#F0FDF4' : pct >= 66 ? '#F0FDF4' : '#FFFBEB'
       }
   const timePct = pace ? (pace.day / pace.daysInMonth) * 100 : 0
-
   return (
     <div>
       <div className="flex items-center justify-between mb-2">
         <span className="text-sm text-[#78716C]">{label}</span>
         <div className="flex items-center gap-2.5">
-          <span
-            className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
-            style={{ backgroundColor: status.bg, color: status.color }}
-          >
-            {status.label}
-          </span>
+          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
+            style={{ backgroundColor: status.bg, color: status.color }}>{status.label}</span>
           <span className="text-sm font-semibold text-[#1C1917] tabular-nums">
             {fmtN(current)} <span className="text-[#C7BFB8] font-normal">/ {fmtN(goal)}</span>
           </span>
         </div>
       </div>
       <div className="relative h-1.5 bg-[#F0EBE5] rounded-full overflow-hidden">
-        <div
-          className="absolute inset-y-0 left-0 rounded-full transition-all duration-500"
-          style={{ width: `${pct}%`, backgroundColor: status.color }}
-        />
+        <div className="absolute inset-y-0 left-0 rounded-full transition-all duration-500"
+          style={{ width: `${pct}%`, backgroundColor: status.color }} />
         {pace && timePct > 0 && timePct < 100 && (
           <div className="absolute inset-y-0 w-px bg-[#C7BFB8]" style={{ left: `${timePct}%` }} />
         )}
@@ -292,247 +295,351 @@ function GoalBar({ label, current, goal, pace }: {
   )
 }
 
-function DropZone({ label, hint, onFile, accepted }: {
+function MiniDropZone({ label, onFile, lastUpdated }: {
   label: string
-  hint: string
   onFile: (file: File) => void
-  accepted: boolean
+  lastUpdated?: string
 }) {
   const ref = useRef<HTMLInputElement>(null)
-  const [dragging, setDragging] = useState(false)
+  const [done, setDone] = useState(false)
 
   const handle = useCallback((file: File) => {
-    if (file.name.endsWith('.csv') || file.type === 'text/csv') onFile(file)
+    if (file.name.endsWith('.csv') || file.type === 'text/csv') {
+      onFile(file)
+      setDone(true)
+      setTimeout(() => setDone(false), 3000)
+    }
   }, [onFile])
 
   return (
-    <div
+    <button
       onClick={() => ref.current?.click()}
-      onDragOver={e => { e.preventDefault(); setDragging(true) }}
-      onDragLeave={() => setDragging(false)}
-      onDrop={e => { e.preventDefault(); setDragging(false); const f = e.dataTransfer.files[0]; if (f) handle(f) }}
-      className="relative border-2 border-dashed rounded-xl p-5 cursor-pointer transition-all text-center"
-      style={accepted
-        ? { borderColor: '#16A34A', backgroundColor: '#F0FDF4' }
-        : dragging
-        ? { borderColor: BRAND, backgroundColor: BRAND_LIGHT }
-        : { borderColor: '#E7E0D8', backgroundColor: '#FAFAF9' }
+      className="flex items-center gap-2 px-3 py-2 rounded-lg border text-xs font-medium transition-all"
+      style={done
+        ? { borderColor: '#16A34A', backgroundColor: '#F0FDF4', color: '#16A34A' }
+        : { borderColor: '#EDE9E4', backgroundColor: 'white', color: '#78716C' }
       }
     >
-      <input ref={ref} type="file" accept=".csv" onChange={e => { const f = e.target.files?.[0]; if (f) handle(f) }} />
-      {accepted ? (
-        <>
-          <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-2">
-            <span className="text-green-600 text-base font-bold">✓</span>
-          </div>
-          <p className="text-sm font-medium text-green-700">{label} uploaded</p>
-        </>
-      ) : (
-        <>
-          <Upload className="w-5 h-5 text-[#C7BFB8] mx-auto mb-2" />
-          <p className="text-sm font-medium text-[#78716C]">{label}</p>
-          <p className="text-xs text-[#A8A29E] mt-0.5">{hint}</p>
-        </>
-      )}
-    </div>
+      <input ref={ref} type="file" accept=".csv"
+        onChange={e => { const f = e.target.files?.[0]; if (f) handle(f); e.target.value = '' }} />
+      {done ? <Check className="w-3.5 h-3.5" /> : <RefreshCw className="w-3.5 h-3.5 text-[#C7BFB8]" />}
+      {done ? 'Updated!' : label}
+    </button>
   )
 }
 
-function PageHeader({ title, subtitle, right }: { title: string; subtitle?: string; right?: React.ReactNode }) {
-  return (
-    <div className="flex items-start justify-between mb-6">
-      <div>
-        <h1 className="text-2xl font-semibold text-[#1C1917]">{title}</h1>
-        {subtitle && <p className="text-sm text-[#A8A29E] mt-0.5">{subtitle}</p>}
-      </div>
-      {right}
-    </div>
-  )
-}
+// ─── Manage View ──────────────────────────────────────────────────────────────
 
-// ─── Setup View ───────────────────────────────────────────────────────────────
-
-interface MemberDraft {
-  id: string
-  name: string
-  role: string
-  postsLoaded: boolean
-  followersLoaded: boolean
-  posts: Post[]
-  followerData: FollowerPoint[]
-  error?: string
-}
-
-function SetupView({ existing, onComplete }: {
-  existing: Member[]
-  onComplete: (members: Member[]) => void
+function ManageView({ members, onUpdate, onDelete, onAdd, onDone }: {
+  members: Member[]
+  onUpdate: (id: string, patch: Partial<Pick<Member, 'name' | 'role' | 'posts' | 'followerData'>>) => void
+  onDelete: (id: string) => void
+  onAdd: (member: Member) => void
+  onDone: () => void
 }) {
-  const [drafts, setDrafts] = useState<MemberDraft[]>(
-    existing.length > 0
-      ? existing.map(m => ({ id: m.id, name: m.name, role: m.role, postsLoaded: m.posts.length > 0, followersLoaded: m.followerData.length > 0, posts: m.posts, followerData: m.followerData }))
-      : [{ id: uid(), name: '', role: '', postsLoaded: false, followersLoaded: false, posts: [], followerData: [] }]
-  )
+  const [showAddForm, setShowAddForm] = useState(members.length === 0)
+  const [newName, setNewName] = useState('')
+  const [newRole, setNewRole] = useState('')
+  const [newPosts, setNewPosts] = useState<Post[]>([])
+  const [newFollowers, setNewFollowers] = useState<FollowerPoint[]>([])
+  const [newPostsLoaded, setNewPostsLoaded] = useState(false)
+  const [addError, setAddError] = useState('')
   const [showInstructions, setShowInstructions] = useState(false)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editName, setEditName] = useState('')
+  const [editRole, setEditRole] = useState('')
 
-  function addDraft() {
-    setDrafts(d => [...d, { id: uid(), name: '', role: '', postsLoaded: false, followersLoaded: false, posts: [], followerData: [] }])
-  }
-
-  function removeDraft(id: string) { setDrafts(d => d.filter(x => x.id !== id)) }
-
-  function updateDraft(id: string, patch: Partial<MemberDraft>) {
-    setDrafts(d => d.map(x => x.id === id ? { ...x, ...patch, error: undefined } : x))
-  }
-
-  function handleFile(draftId: string, file: File, type: 'posts' | 'followers') {
+  function handleNewFile(file: File, type: 'posts' | 'followers') {
     const reader = new FileReader()
     reader.onload = e => {
       const text = e.target?.result as string
       try {
         if (type === 'posts') {
           const posts = parsePostsCSV(text)
-          if (posts.length === 0) throw new Error('No valid post data found')
-          updateDraft(draftId, { posts, postsLoaded: true })
+          if (posts.length === 0) { setAddError('No valid post data found in CSV'); return }
+          setNewPosts(posts)
+          setNewPostsLoaded(true)
+          setAddError('')
         } else {
-          const followerData = parseFollowersCSV(text)
-          updateDraft(draftId, { followerData, followersLoaded: true })
+          setNewFollowers(parseFollowersCSV(text))
         }
       } catch (err) {
-        updateDraft(draftId, { error: `Could not parse ${type} CSV: ${(err as Error).message}` })
+        setAddError((err as Error).message)
       }
     }
     reader.readAsText(file)
   }
 
-  const canLaunch = drafts.some(d => d.name.trim() && d.postsLoaded)
+  function handleUpdateFile(memberId: string, file: File, type: 'posts' | 'followers') {
+    const reader = new FileReader()
+    reader.onload = e => {
+      const text = e.target?.result as string
+      try {
+        if (type === 'posts') {
+          const posts = parsePostsCSV(text)
+          if (posts.length > 0) onUpdate(memberId, { posts })
+        } else {
+          const followerData = parseFollowersCSV(text)
+          onUpdate(memberId, { followerData })
+        }
+      } catch { /* ignore */ }
+    }
+    reader.readAsText(file)
+  }
 
-  function launch() {
-    const members: Member[] = drafts
-      .filter(d => d.name.trim() && d.postsLoaded)
-      .map(d => ({ id: d.id, name: d.name.trim(), role: d.role.trim(), posts: d.posts, followerData: d.followerData, addedAt: Date.now() }))
-    onComplete(members)
+  function addMember() {
+    if (!newName.trim() || !newPostsLoaded) return
+    onAdd({
+      id: uid(),
+      name: newName.trim(),
+      role: newRole.trim(),
+      posts: newPosts,
+      followerData: newFollowers,
+      addedAt: Date.now()
+    })
+    setNewName(''); setNewRole(''); setNewPosts([]); setNewFollowers([])
+    setNewPostsLoaded(false); setShowAddForm(false)
+  }
+
+  function saveEdit(id: string) {
+    onUpdate(id, { name: editName.trim(), role: editRole.trim() })
+    setEditingId(null)
   }
 
   return (
-    <div className="min-h-screen bg-[#F6F3EF] flex flex-col">
-      {/* Header */}
+    <div className="min-h-screen bg-[#F6F3EF]">
       <header className="bg-white border-b border-[#EDE9E4] px-6 py-4">
-        <div className="max-w-2xl mx-auto flex items-center gap-3">
-          <NotusLogo />
-          <div>
-            <p className="text-sm font-semibold text-[#1C1917]">FBF LinkedIn Dashboard</p>
-            <p className="text-xs text-[#A8A29E]">by notus</p>
+        <div className="max-w-2xl mx-auto flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <NotusLogo />
+            <div>
+              <p className="text-sm font-semibold text-[#1C1917]">Manage Dashboard</p>
+              <p className="text-xs text-[#A8A29E]">Add, update, or remove team members</p>
+            </div>
           </div>
+          {members.length > 0 && (
+            <button onClick={onDone}
+              className="text-sm font-medium px-4 py-2 rounded-lg text-white transition-colors"
+              style={{ backgroundColor: BRAND }}>
+              Back to Dashboard
+            </button>
+          )}
         </div>
       </header>
 
-      <main className="flex-1 flex flex-col items-center justify-center px-6 py-12">
-        <div className="w-full max-w-2xl">
-          <div className="text-center mb-8">
-            <h1 className="text-2xl font-semibold text-[#1C1917] mb-2">Set up your team</h1>
-            <p className="text-sm text-[#78716C] max-w-md mx-auto leading-relaxed">
-              Upload LinkedIn analytics exports for each team member to get started.
-            </p>
-          </div>
+      <main className="max-w-2xl mx-auto px-6 py-8 space-y-4">
 
-          {/* Instructions */}
-          <div className="bg-white border border-[#EDE9E4] rounded-xl mb-5 overflow-hidden">
-            <button
-              onClick={() => setShowInstructions(s => !s)}
-              className="w-full flex items-center justify-between px-5 py-4 text-sm text-[#78716C] hover:text-[#1C1917] transition-colors"
-            >
-              <span className="flex items-center gap-2">
-                <FileText className="w-4 h-4 text-[#C7BFB8]" />
-                How to export from LinkedIn Analytics
-              </span>
-              <ChevronDown className={`w-4 h-4 text-[#C7BFB8] transition-transform ${showInstructions ? 'rotate-180' : ''}`} />
-            </button>
-            {showInstructions && (
-              <div className="px-5 pb-5 border-t border-[#F0EBE5] pt-4 space-y-4">
-                <div>
-                  <p className="text-[10px] font-semibold uppercase tracking-widest mb-2" style={{ color: BRAND }}>Post Analytics CSV</p>
-                  <ol className="text-xs text-[#78716C] space-y-1 list-decimal list-inside leading-relaxed">
-                    <li>Go to your LinkedIn profile → click <strong className="text-[#44403C]">Analytics</strong></li>
-                    <li>Click <strong className="text-[#44403C]">Content</strong> in the top nav</li>
-                    <li>Set your date range (3–6 months recommended)</li>
-                    <li>Click <strong className="text-[#44403C]">Export</strong> → download the CSV</li>
-                  </ol>
-                </div>
-                <div>
-                  <p className="text-[10px] font-semibold uppercase tracking-widest mb-2" style={{ color: BRAND }}>Followers CSV (optional)</p>
-                  <ol className="text-xs text-[#78716C] space-y-1 list-decimal list-inside leading-relaxed">
-                    <li>Same Analytics page → click <strong className="text-[#44403C]">Followers</strong></li>
-                    <li>Click <strong className="text-[#44403C]">Export</strong></li>
-                  </ol>
-                </div>
+        {/* Instructions */}
+        <div className="bg-white border border-[#EDE9E4] rounded-xl overflow-hidden">
+          <button onClick={() => setShowInstructions(s => !s)}
+            className="w-full flex items-center justify-between px-5 py-4 text-sm text-[#78716C] hover:text-[#1C1917] transition-colors">
+            <span className="flex items-center gap-2">
+              <FileText className="w-4 h-4 text-[#C7BFB8]" />
+              How to export from LinkedIn Analytics
+            </span>
+            <ChevronDown className={`w-4 h-4 text-[#C7BFB8] transition-transform ${showInstructions ? 'rotate-180' : ''}`} />
+          </button>
+          {showInstructions && (
+            <div className="px-5 pb-5 border-t border-[#F0EBE5] pt-4 space-y-4">
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-widest mb-2" style={{ color: BRAND }}>Post Analytics CSV</p>
+                <ol className="text-xs text-[#78716C] space-y-1 list-decimal list-inside leading-relaxed">
+                  <li>Go to your LinkedIn profile → click <strong className="text-[#44403C]">Analytics</strong></li>
+                  <li>Click <strong className="text-[#44403C]">Content</strong> in the top nav</li>
+                  <li>Set your date range (export the full period for updates)</li>
+                  <li>Click <strong className="text-[#44403C]">Export</strong> → download the CSV</li>
+                </ol>
               </div>
-            )}
-          </div>
-
-          {/* Member drafts */}
-          <div className="space-y-4 mb-5">
-            {drafts.map((draft, i) => (
-              <div key={draft.id} className="bg-white border border-[#EDE9E4] rounded-xl p-5">
-                <div className="flex items-center justify-between mb-4">
-                  <span className="text-[10px] font-semibold uppercase tracking-widest text-[#A8A29E]">Member {i + 1}</span>
-                  {drafts.length > 1 && (
-                    <button onClick={() => removeDraft(draft.id)} className="text-[#C7BFB8] hover:text-red-400 transition-colors">
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  )}
-                </div>
-                <div className="grid grid-cols-2 gap-3 mb-4">
-                  <div>
-                    <label className="text-xs text-[#A8A29E] block mb-1.5">Full Name *</label>
-                    <input
-                      type="text"
-                      value={draft.name}
-                      onChange={e => updateDraft(draft.id, { name: e.target.value })}
-                      placeholder="Rick Cotton"
-                      className="w-full bg-[#FAFAF9] border border-[#EDE9E4] text-[#1C1917] text-sm rounded-lg px-3 py-2.5 outline-none focus:border-[#C7BFB8] transition-colors placeholder:text-[#C7BFB8]"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs text-[#A8A29E] block mb-1.5">Role</label>
-                    <input
-                      type="text"
-                      value={draft.role}
-                      onChange={e => updateDraft(draft.id, { role: e.target.value })}
-                      placeholder="Head of Sales"
-                      className="w-full bg-[#FAFAF9] border border-[#EDE9E4] text-[#1C1917] text-sm rounded-lg px-3 py-2.5 outline-none focus:border-[#C7BFB8] transition-colors placeholder:text-[#C7BFB8]"
-                    />
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <DropZone label="Post Analytics CSV" hint="Required" onFile={f => handleFile(draft.id, f, 'posts')} accepted={draft.postsLoaded} />
-                  <DropZone label="Followers CSV" hint="Optional" onFile={f => handleFile(draft.id, f, 'followers')} accepted={draft.followersLoaded} />
-                </div>
-                {draft.postsLoaded && (
-                  <p className="text-xs text-green-600 mt-2">{draft.posts.length} posts loaded{draft.followersLoaded && ` · ${draft.followerData.length} follower data points`}</p>
-                )}
-                {draft.error && <p className="text-xs text-red-500 mt-2">{draft.error}</p>}
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-widest mb-2" style={{ color: BRAND }}>Followers CSV (optional)</p>
+                <ol className="text-xs text-[#78716C] space-y-1 list-decimal list-inside leading-relaxed">
+                  <li>Same Analytics page → click <strong className="text-[#44403C]">Followers</strong></li>
+                  <li>Click <strong className="text-[#44403C]">Export</strong></li>
+                </ol>
               </div>
-            ))}
-          </div>
-
-          <div className="flex flex-col gap-3">
-            <button
-              onClick={addDraft}
-              className="w-full flex items-center justify-center gap-2 py-3 border-2 border-dashed border-[#EDE9E4] rounded-xl text-sm text-[#A8A29E] hover:border-[#C7BFB8] hover:text-[#78716C] transition-colors"
-            >
-              <Plus className="w-4 h-4" />
-              Add another team member
-            </button>
-            <button
-              onClick={launch}
-              disabled={!canLaunch}
-              className="w-full py-3.5 rounded-xl text-sm font-semibold transition-all disabled:opacity-40 disabled:cursor-not-allowed text-white"
-              style={{ backgroundColor: BRAND }}
-            >
-              {existing.length > 0 ? 'Update Dashboard' : 'Launch Dashboard'}
-            </button>
-          </div>
+              <p className="text-xs text-[#A8A29E] italic">Tip: when updating weekly, export a longer date range so all history is preserved.</p>
+            </div>
+          )}
         </div>
+
+        {/* Existing members */}
+        {members.length > 0 && (
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-[#A8A29E] mb-3">Team Members</p>
+            <div className="space-y-3">
+              {members.map(m => {
+                const months = uniqueMonths(m.posts)
+                const latestMonth = months[0]
+                const latestPosts = latestMonth ? postsForMonth(m.posts, latestMonth) : []
+                const latestImpressions = latestPosts.reduce((s, p) => s + p.impressions, 0)
+                const isEditing = editingId === m.id
+
+                return (
+                  <div key={m.id} className="bg-white border border-[#EDE9E4] rounded-xl p-5">
+                    <div className="flex items-start justify-between gap-3 mb-3">
+                      <div className="flex items-center gap-3 flex-1 min-w-0">
+                        <div className="w-9 h-9 rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0"
+                          style={{ backgroundColor: BRAND }}>
+                          {m.name.charAt(0).toUpperCase()}
+                        </div>
+                        {isEditing ? (
+                          <div className="flex gap-2 flex-1">
+                            <input value={editName} onChange={e => setEditName(e.target.value)}
+                              className="flex-1 bg-[#FAFAF9] border border-[#EDE9E4] text-[#1C1917] text-sm rounded-lg px-3 py-1.5 outline-none"
+                              placeholder="Name" />
+                            <input value={editRole} onChange={e => setEditRole(e.target.value)}
+                              className="flex-1 bg-[#FAFAF9] border border-[#EDE9E4] text-[#1C1917] text-sm rounded-lg px-3 py-1.5 outline-none"
+                              placeholder="Role" />
+                          </div>
+                        ) : (
+                          <div className="min-w-0">
+                            <p className="font-semibold text-[#1C1917] truncate">{m.name}</p>
+                            {m.role && <p className="text-xs text-[#A8A29E]">{m.role}</p>}
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        {isEditing ? (
+                          <>
+                            <button onClick={() => saveEdit(m.id)}
+                              className="text-xs font-medium px-2.5 py-1 rounded-lg text-white"
+                              style={{ backgroundColor: BRAND }}>Save</button>
+                            <button onClick={() => setEditingId(null)}
+                              className="text-xs text-[#A8A29E] hover:text-[#78716C]">Cancel</button>
+                          </>
+                        ) : (
+                          <>
+                            <button onClick={() => { setEditingId(m.id); setEditName(m.name); setEditRole(m.role) }}
+                              className="text-xs text-[#A8A29E] hover:text-[#78716C] transition-colors px-2 py-1 rounded hover:bg-[#F6F3EF]">
+                              Edit
+                            </button>
+                            <button onClick={() => { if (confirm(`Remove ${m.name}? Their data will be deleted.`)) onDelete(m.id) }}
+                              className="text-xs text-[#C7BFB8] hover:text-red-400 transition-colors px-2 py-1 rounded hover:bg-red-50">
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Current data summary */}
+                    <div className="flex items-center gap-3 mb-3 text-xs text-[#A8A29E]">
+                      <span className="flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-green-400 inline-block" />
+                        {m.posts.length} posts loaded
+                      </span>
+                      {m.followerData.length > 0 && (
+                        <span className="flex items-center gap-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-green-400 inline-block" />
+                          {m.followerData.length} follower data points
+                        </span>
+                      )}
+                      {latestMonth && (
+                        <span className="text-[#C7BFB8]">Latest: {monthLabel(latestMonth)} · {fmtN(latestImpressions)} impressions</span>
+                      )}
+                    </div>
+
+                    {/* Update buttons */}
+                    <div className="flex items-center gap-2">
+                      <MiniDropZone
+                        label="Update Posts CSV"
+                        onFile={f => handleUpdateFile(m.id, f, 'posts')}
+                      />
+                      <MiniDropZone
+                        label="Update Followers CSV"
+                        onFile={f => handleUpdateFile(m.id, f, 'followers')}
+                      />
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Add new member */}
+        {!showAddForm ? (
+          <button
+            onClick={() => setShowAddForm(true)}
+            className="w-full flex items-center justify-center gap-2 py-3.5 border-2 border-dashed border-[#EDE9E4] rounded-xl text-sm text-[#A8A29E] hover:border-[#C7BFB8] hover:text-[#78716C] transition-colors bg-white"
+          >
+            <Plus className="w-4 h-4" />
+            Add team member
+          </button>
+        ) : (
+          <div className="bg-white border border-[#EDE9E4] rounded-xl p-5">
+            <div className="flex items-center justify-between mb-4">
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-[#A8A29E]">New Member</p>
+              <button onClick={() => { setShowAddForm(false); setNewName(''); setNewRole(''); setNewPosts([]); setNewFollowers([]); setNewPostsLoaded(false) }}
+                className="text-[#C7BFB8] hover:text-[#78716C]"><X className="w-4 h-4" /></button>
+            </div>
+            <div className="grid grid-cols-2 gap-3 mb-4">
+              <div>
+                <label className="text-xs text-[#A8A29E] block mb-1.5">Full Name *</label>
+                <input type="text" value={newName} onChange={e => setNewName(e.target.value)}
+                  placeholder="e.g. Daryl Smith"
+                  className="w-full bg-[#FAFAF9] border border-[#EDE9E4] text-[#1C1917] text-sm rounded-lg px-3 py-2.5 outline-none focus:border-[#C7BFB8] transition-colors placeholder:text-[#C7BFB8]" />
+              </div>
+              <div>
+                <label className="text-xs text-[#A8A29E] block mb-1.5">Role</label>
+                <input type="text" value={newRole} onChange={e => setNewRole(e.target.value)}
+                  placeholder="e.g. Loan Officer"
+                  className="w-full bg-[#FAFAF9] border border-[#EDE9E4] text-[#1C1917] text-sm rounded-lg px-3 py-2.5 outline-none focus:border-[#C7BFB8] transition-colors placeholder:text-[#C7BFB8]" />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3 mb-4">
+              {[
+                { type: 'posts' as const, label: 'Post Analytics CSV', hint: 'Required', loaded: newPostsLoaded },
+                { type: 'followers' as const, label: 'Followers CSV', hint: 'Optional', loaded: newFollowers.length > 0 },
+              ].map(({ type, label, hint, loaded }) => {
+                const ref = useRef<HTMLInputElement>(null)
+                return (
+                  <div key={type}
+                    onClick={() => ref.current?.click()}
+                    className="border-2 border-dashed rounded-xl p-5 cursor-pointer transition-all text-center"
+                    style={loaded
+                      ? { borderColor: '#16A34A', backgroundColor: '#F0FDF4' }
+                      : { borderColor: '#E7E0D8', backgroundColor: '#FAFAF9' }
+                    }>
+                    <input ref={ref} type="file" accept=".csv"
+                      onChange={e => { const f = e.target.files?.[0]; if (f) handleNewFile(f, type); e.target.value = '' }} />
+                    {loaded ? (
+                      <>
+                        <div className="w-7 h-7 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-1.5">
+                          <span className="text-green-600 text-sm font-bold">✓</span>
+                        </div>
+                        <p className="text-sm font-medium text-green-700">{label} loaded</p>
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="w-5 h-5 text-[#C7BFB8] mx-auto mb-1.5" />
+                        <p className="text-sm font-medium text-[#78716C]">{label}</p>
+                        <p className="text-xs text-[#A8A29E] mt-0.5">{hint}</p>
+                      </>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+            {addError && <p className="text-xs text-red-500 mb-3">{addError}</p>}
+            <button
+              onClick={addMember}
+              disabled={!newName.trim() || !newPostsLoaded}
+              className="w-full py-3 rounded-xl text-sm font-semibold text-white transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+              style={{ backgroundColor: BRAND }}>
+              Add Member
+            </button>
+          </div>
+        )}
+
+        {members.length > 0 && (
+          <div className="pt-2">
+            <button onClick={onDone}
+              className="w-full py-3 rounded-xl text-sm font-medium border border-[#EDE9E4] text-[#78716C] hover:bg-white transition-colors">
+              Done — Back to Dashboard
+            </button>
+          </div>
+        )}
       </main>
     </div>
   )
@@ -560,14 +667,12 @@ function LeaderboardView({ members, selectedMonth }: { members: Member[]; select
 
   return (
     <div className="space-y-5">
-      {/* Team totals */}
       <div className="grid grid-cols-3 gap-4">
         <StatCard label="Team Impressions" value={fmtN(totalImpressions)} sub={`${members.length} members · ${monthLabel(selectedMonth)}`} />
         <StatCard label="Posts Published" value={totalPosts.toString()} sub={`${fmtN(totalImpressions / Math.max(totalPosts, 1))} avg impressions / post`} />
         <StatCard label="Follower Growth" value={`+${fmtN(totalFollowers)}`} sub={monthLabel(selectedMonth)} />
       </div>
 
-      {/* Table */}
       <div className="bg-white border border-[#EDE9E4] rounded-xl overflow-hidden">
         <div className="px-6 py-4 border-b border-[#F0EBE5]">
           <p className="text-[10px] font-semibold uppercase tracking-widest text-[#A8A29E]">Leaderboard — {monthLabel(selectedMonth)}</p>
@@ -585,8 +690,7 @@ function LeaderboardView({ members, selectedMonth }: { members: Member[]; select
               {rows.map((row, i) => (
                 <tr key={row.member.id} className="border-b border-[#F6F3EF] hover:bg-[#FAFAF9] transition-colors">
                   <td className="px-5 py-4">
-                    {i < 3
-                      ? <span className="text-lg">{['🥇', '🥈', '🥉'][i]}</span>
+                    {i < 3 ? <span className="text-lg">{['🥇', '🥈', '🥉'][i]}</span>
                       : <span className="text-sm text-[#C7BFB8] font-mono">#{i + 1}</span>}
                   </td>
                   <td className="px-5 py-4">
@@ -655,7 +759,6 @@ function MemberView({ member, goals, onGoalsChange }: {
 
   const mp = useMemo(() => postsForMonth(member.posts, selectedMonth), [member.posts, selectedMonth])
   const mf = useMemo(() => followersForMonth(member.followerData, selectedMonth), [member.followerData, selectedMonth])
-
   const prevMonthIdx = months.indexOf(selectedMonth) + 1
   const prevMonth = months[prevMonthIdx] ?? null
   const prevMp = useMemo(() => prevMonth ? postsForMonth(member.posts, prevMonth) : [], [member.posts, prevMonth])
@@ -666,7 +769,6 @@ function MemberView({ member, goals, onGoalsChange }: {
   const avgPerPost = mp.length > 0 ? totalImpressions / mp.length : 0
   const avgEngRate = mp.length > 0 ? mp.reduce((s, p) => s + p.engagementRate, 0) / mp.length : 0
   const memberTier = tier(avgPerPost)
-
   const topPost = mp.reduce<Post | null>((top, p) => (!top || p.impressions > top.impressions) ? p : top, null)
   const impDiff = prevImpressions > 0 ? ((totalImpressions - prevImpressions) / prevImpressions) * 100 : null
   const follDiff = prevMf > 0 ? ((mf - prevMf) / prevMf) * 100 : null
@@ -701,7 +803,6 @@ function MemberView({ member, goals, onGoalsChange }: {
 
   return (
     <div className="space-y-5">
-      {/* Member header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0"
@@ -785,7 +886,6 @@ function MemberView({ member, goals, onGoalsChange }: {
                 </BarChart>
               </ResponsiveContainer>
             </div>
-
             {followerChartData.length > 0 && (
               <div className="bg-white border border-[#EDE9E4] rounded-xl p-5">
                 <p className="text-[10px] font-semibold uppercase tracking-widest text-[#A8A29E] mb-4">Follower Growth Trend</p>
@@ -806,7 +906,6 @@ function MemberView({ member, goals, onGoalsChange }: {
             )}
           </div>
 
-          {/* Goals */}
           <div className="bg-white border border-[#EDE9E4] rounded-xl p-5">
             <div className="flex items-center justify-between mb-5">
               <p className="text-[10px] font-semibold uppercase tracking-widest text-[#A8A29E]">Monthly Goals</p>
@@ -817,7 +916,7 @@ function MemberView({ member, goals, onGoalsChange }: {
                 </button>
               ) : (
                 <div className="flex gap-4">
-                  <button onClick={() => setEditingGoals(false)} className="text-xs text-[#A8A29E] hover:text-[#78716C]">Cancel</button>
+                  <button onClick={() => setEditingGoals(false)} className="text-xs text-[#A8A29E]">Cancel</button>
                   <button onClick={() => { onGoalsChange(draftGoals); setEditingGoals(false) }}
                     className="text-xs font-medium" style={{ color: BRAND }}>Save</button>
                 </div>
@@ -834,7 +933,7 @@ function MemberView({ member, goals, onGoalsChange }: {
                     <label className="text-xs text-[#A8A29E] block mb-1.5">{label}</label>
                     <input type="number" min={0} value={draftGoals[key]}
                       onChange={e => setDraftGoals(g => ({ ...g, [key]: parseInt(e.target.value) || 0 }))}
-                      className="w-full bg-[#FAFAF9] border border-[#EDE9E4] text-[#1C1917] text-sm rounded-lg px-3 py-2 outline-none focus:border-[#C7BFB8] transition-colors" />
+                      className="w-full bg-[#FAFAF9] border border-[#EDE9E4] text-[#1C1917] text-sm rounded-lg px-3 py-2 outline-none" />
                   </div>
                 ))}
               </div>
@@ -847,7 +946,6 @@ function MemberView({ member, goals, onGoalsChange }: {
             )}
           </div>
 
-          {/* Top post */}
           {topPost && (
             <div className="bg-white border border-[#EDE9E4] rounded-xl p-5">
               <div className="flex items-center gap-2 mb-4">
@@ -863,7 +961,7 @@ function MemberView({ member, goals, onGoalsChange }: {
                   <p className="text-xs text-[#C7BFB8] mt-1">{topPost.date}</p>
                   {avgPerPost > 0 && (
                     <p className="text-xs text-green-600 mt-2">
-                      {(topPost.impressions / avgPerPost).toFixed(1)}x your monthly average ({fmtN(topPost.impressions)} vs {fmtN(avgPerPost)})
+                      {(topPost.impressions / avgPerPost).toFixed(1)}x your monthly average
                     </p>
                   )}
                 </div>
@@ -885,7 +983,6 @@ function MemberView({ member, goals, onGoalsChange }: {
             </div>
           )}
 
-          {/* Posts table */}
           <div className="bg-white border border-[#EDE9E4] rounded-xl overflow-hidden">
             <div className="px-6 py-4 border-b border-[#F0EBE5]">
               <p className="text-[10px] font-semibold uppercase tracking-widest text-[#A8A29E]">All Posts — {monthLabel(selectedMonth)}</p>
@@ -941,7 +1038,7 @@ function MemberView({ member, goals, onGoalsChange }: {
 export default function Page() {
   const [members, setMembers] = useState<Member[]>([])
   const [goals, setGoals] = useState<Goals>({})
-  const [view, setView] = useState<'setup' | 'dashboard'>('setup')
+  const [view, setView] = useState<'manage' | 'dashboard'>('manage')
   const [activeTab, setActiveTab] = useState<string>('leaderboard')
 
   useEffect(() => {
@@ -970,16 +1067,38 @@ export default function Page() {
     if (allMonthsAcross.length > 0) setSelectedMonth(allMonthsAcross[0])
   }, [allMonthsAcross])
 
-  function handleComplete(newMembers: Member[]) {
-    setMembers(newMembers)
-    const g: Goals = {}
-    newMembers.forEach(m => { g[m.id] = goals[m.id] ?? { ...DEFAULT_GOALS } })
-    setGoals(g)
-    setView('dashboard')
-    setActiveTab('leaderboard')
+  function handleUpdate(id: string, patch: Partial<Pick<Member, 'name' | 'role' | 'posts' | 'followerData'>>) {
+    setMembers(prev => prev.map(m => m.id === id ? { ...m, ...patch } : m))
+    // If name changed and this member is active tab, update is transparent
   }
 
-  if (view === 'setup') return <SetupView existing={members} onComplete={handleComplete} />
+  function handleDelete(id: string) {
+    const updated = members.filter(m => m.id !== id)
+    setMembers(updated)
+    if (updated.length === 0) {
+      localStorage.removeItem(STORAGE_KEY)
+      setView('manage')
+    } else if (activeTab === id) {
+      setActiveTab('leaderboard')
+    }
+  }
+
+  function handleAdd(member: Member) {
+    setMembers(prev => [...prev, member])
+    setGoals(prev => ({ ...prev, [member.id]: { ...DEFAULT_GOALS } }))
+  }
+
+  if (view === 'manage') {
+    return (
+      <ManageView
+        members={members}
+        onUpdate={handleUpdate}
+        onDelete={handleDelete}
+        onAdd={handleAdd}
+        onDone={() => { if (members.length > 0) setView('dashboard') }}
+      />
+    )
+  }
 
   const activeMember = members.find(m => m.id === activeTab) ?? null
 
@@ -987,22 +1106,15 @@ export default function Page() {
     <div className="flex h-screen bg-[#F6F3EF] overflow-hidden">
       {/* Sidebar */}
       <aside className="w-44 bg-white border-r border-[#EDE9E4] flex flex-col flex-shrink-0">
-        {/* Logo */}
         <div className="px-4 py-4 border-b border-[#F0EBE5]">
-          <div className="flex items-center gap-2.5">
-            <NotusLogo />
-          </div>
+          <NotusLogo />
         </div>
 
-        {/* Nav */}
         <nav className="flex-1 overflow-y-auto px-3 py-3">
           <SectionLabel>Navigation</SectionLabel>
-          <NavItem
-            label="Team"
-            active={activeTab === 'leaderboard'}
-            onClick={() => setActiveTab('leaderboard')}
-            icon={<Users className="w-4 h-4" />}
-          />
+          <NavItem label="Team" active={activeTab === 'leaderboard'} onClick={() => setActiveTab('leaderboard')}
+            icon={<Users className="w-4 h-4" />} />
+
           {members.length > 0 && (
             <>
               <SectionLabel>Members</SectionLabel>
@@ -1012,8 +1124,9 @@ export default function Page() {
                   label={m.name.split(' ')[0]}
                   active={activeTab === m.id}
                   onClick={() => setActiveTab(m.id)}
+                  onDelete={() => handleDelete(m.id)}
                   icon={
-                    <div className="w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-bold"
+                    <div className="w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-bold flex-shrink-0"
                       style={{ backgroundColor: activeTab === m.id ? 'rgba(255,255,255,0.3)' : '#EDE9E4', color: activeTab === m.id ? 'white' : BRAND }}>
                       {m.name.charAt(0).toUpperCase()}
                     </div>
@@ -1024,34 +1137,20 @@ export default function Page() {
           )}
         </nav>
 
-        {/* Settings */}
         <div className="px-3 py-3 border-t border-[#F0EBE5]">
           <SectionLabel>Settings</SectionLabel>
-          <NavItem
-            label="Manage"
-            active={false}
-            onClick={() => setView('setup')}
-            icon={<UserPlus className="w-4 h-4" />}
-          />
-          <button
-            onClick={() => { if (confirm('Reset all data?')) { localStorage.removeItem(STORAGE_KEY); setMembers([]); setGoals({}); setView('setup') } }}
-            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-[#C7BFB8] hover:text-red-400 transition-colors"
-          >
-            <Settings className="w-4 h-4 opacity-50" />
-            Reset
-          </button>
+          <NavItem label="Manage" active={false} onClick={() => setView('manage')}
+            icon={<UserPlus className="w-4 h-4" />} />
         </div>
 
-        {/* Footer */}
         <div className="px-4 py-3 border-t border-[#F0EBE5]">
-          <p className="text-[10px] text-[#C7BFB8]">by notus · notus.xyz</p>
+          <p className="text-[10px] text-[#C7BFB8]">by notus</p>
         </div>
       </aside>
 
-      {/* Main content */}
+      {/* Main */}
       <main className="flex-1 overflow-y-auto">
         <div className="max-w-5xl mx-auto px-6 py-6">
-          {/* Page header */}
           {activeTab === 'leaderboard' ? (
             <div className="flex items-center justify-between mb-6">
               <div>
