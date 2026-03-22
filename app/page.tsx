@@ -234,22 +234,51 @@ function toNum(v: string): number {
 }
 
 // Single LinkedIn CSV contains post analytics (and "follows" column = follower growth per post)
-function parseLinkedInCSV(text: string): Post[] {
-  const { data } = Papa.parse<Row>(text, { header: true, skipEmptyLines: true, transformHeader: h => h.trim() })
-  return (data as Row[]).map(row => {
-    const impressions = toNum(findVal(row, ['impressions']))
-    const clicks = toNum(findVal(row, ['clicks']))
-    const likes = toNum(findVal(row, ['likes', 'reactions']))
+// Handles: UTF-8 BOM, LinkedIn metadata rows before headers, LinkedIn's exact column names
+function parseLinkedInCSV(text: string): { posts: Post[]; detectedColumns: string[] } {
+  // Strip UTF-8 BOM
+  const clean = text.replace(/^\uFEFF/, '')
+
+  // LinkedIn exports sometimes start with metadata rows (e.g. "LinkedIn analytics", date range)
+  // Scan up to 10 lines for the real header row — identified by containing "impression" or "clicks"
+  const lines = clean.split(/\r?\n/)
+  let headerIdx = 0
+  for (let i = 0; i < Math.min(lines.length, 10); i++) {
+    const lower = lines[i].toLowerCase()
+    if (lower.includes('impression') || (lower.includes('click') && lower.includes('like'))) {
+      headerIdx = i
+      break
+    }
+  }
+  const csvText = lines.slice(headerIdx).join('\n')
+
+  const { data } = Papa.parse<Row>(csvText, {
+    header: true,
+    skipEmptyLines: true,
+    transformHeader: h => h.trim().replace(/^\uFEFF/, ''), // strip BOM from first header too
+  })
+
+  const rows = data as Row[]
+  const detectedColumns = rows.length > 0 ? Object.keys(rows[0]) : []
+
+  const posts = rows.map(row => {
+    const impressions = toNum(findVal(row, ['impressions', 'total impressions']))
+    const clicks = toNum(findVal(row, ['clicks', 'total clicks']))
+    const likes = toNum(findVal(row, ['likes', 'reactions', 'total reactions']))
     const comments = toNum(findVal(row, ['comments']))
     const shares = toNum(findVal(row, ['shares', 'reposts']))
-    const follows = toNum(findVal(row, ['follows']))
-    const rawEng = toNum(findVal(row, ['engagements']))
+    const follows = toNum(findVal(row, ['follows', 'followers gained']))
+    const rawEng = toNum(findVal(row, ['engagements', 'total engagements']))
     const engagements = rawEng || likes + comments + shares + follows
     const engagementRate = impressions > 0 ? (engagements / impressions) * 100 : 0
-    const date = findVal(row, ['date', 'published date', 'published_date'])
-    const url = findVal(row, ['post', 'url', 'link', 'content'])
+    // LinkedIn exact column names: "Content publish date", "Post URL"
+    const date = findVal(row, ['content publish date', 'publish date', 'published date', 'date', 'published_date', 'post date'])
+    const url = findVal(row, ['post url', 'post link', 'url', 'link']) ||
+                findVal(row, ['content']) // "Content" column in some exports contains the URL
     return { date, url, impressions, clicks, likes, comments, shares, follows, engagements, engagementRate }
   }).filter(p => p.impressions > 0)
+
+  return { posts, detectedColumns }
 }
 
 function parseICPSignalsCSV(text: string): ICPSignal[] {
@@ -347,22 +376,40 @@ function GoalBar({ label, current, goal, pace }: {
   )
 }
 
-function MiniDropZone({ label, onFile, success }: { label: string; onFile: (f: File) => void; success?: boolean }) {
+function MiniDropZone({ label, onFile }: {
+  label: string
+  onFile: (f: File, onResult: (success: boolean, msg?: string) => void) => void
+}) {
   const ref = useRef<HTMLInputElement>(null)
-  const [done, setDone] = useState(false)
-  useEffect(() => { if (success) { setDone(true); setTimeout(() => setDone(false), 3000) } }, [success])
-  const handle = useCallback((f: File) => { if (f.name.endsWith('.csv') || f.type === 'text/csv') { onFile(f); setDone(true); setTimeout(() => setDone(false), 3000) } }, [onFile])
+  const [status, setStatus] = useState<'idle' | 'ok' | 'err'>('idle')
+  const [errMsg, setErrMsg] = useState('')
+  const handle = useCallback((f: File) => {
+    if (!f.name.endsWith('.csv') && f.type !== 'text/csv') {
+      setErrMsg('Not a CSV file'); setStatus('err'); setTimeout(() => setStatus('idle'), 4000)
+      return
+    }
+    onFile(f, (success, msg) => {
+      if (success) { setStatus('ok'); setTimeout(() => setStatus('idle'), 3000) }
+      else { setErrMsg(msg || 'No data found'); setStatus('err'); setTimeout(() => setStatus('idle'), 5000) }
+    })
+  }, [onFile])
+  const style = status === 'ok'
+    ? { borderColor: '#16A34A', backgroundColor: '#F0FDF4', color: '#16A34A' }
+    : status === 'err'
+    ? { borderColor: '#DC2626', backgroundColor: '#FEF2F2', color: '#DC2626' }
+    : { borderColor: '#EDE9E4', backgroundColor: 'white', color: '#78716C' }
   return (
-    <>
+    <div className="flex flex-col gap-1">
       <input ref={ref} type="file" accept=".csv" style={{ display: 'none' }}
         onChange={e => { const f = e.target.files?.[0]; if (f) handle(f); e.target.value = '' }} />
       <button onClick={() => ref.current?.click()}
         className="flex items-center gap-2 px-3 py-2 rounded-lg border text-xs font-medium transition-all"
-        style={done ? { borderColor: '#16A34A', backgroundColor: '#F0FDF4', color: '#16A34A' } : { borderColor: '#EDE9E4', backgroundColor: 'white', color: '#78716C' }}>
-        {done ? <Check className="w-3.5 h-3.5" /> : <RefreshCw className="w-3.5 h-3.5 text-[#C7BFB8]" />}
-        {done ? 'Updated!' : label}
+        style={style}>
+        {status === 'ok' ? <Check className="w-3.5 h-3.5" /> : <RefreshCw className="w-3.5 h-3.5" style={{ color: status === 'err' ? '#DC2626' : '#C7BFB8' }} />}
+        {status === 'ok' ? 'Updated!' : status === 'err' ? 'Failed' : label}
       </button>
-    </>
+      {status === 'err' && <p className="text-[10px] text-red-500 leading-tight max-w-[180px]">{errMsg}</p>}
+    </div>
   )
 }
 
@@ -418,24 +465,32 @@ function ManageView({ members, onUpdate, onDelete, onAdd, onDone }: {
   const [editName, setEditName] = useState('')
   const [editRole, setEditRole] = useState('')
 
-  function handleUpdateFile(memberId: string, file: File, type: 'posts' | 'icp') {
+  function handleUpdateFile(memberId: string, file: File, type: 'posts' | 'icp', onResult: (success: boolean, msg?: string) => void) {
     const reader = new FileReader()
     reader.onload = e => {
       const text = e.target?.result as string
       try {
         const member = members.find(m => m.id === memberId)
-        if (!member) return
+        if (!member) { onResult(false, 'Member not found'); return }
         if (type === 'posts') {
-          const incoming = parseLinkedInCSV(text)
-          if (incoming.length === 0) return
+          const { posts: incoming, detectedColumns } = parseLinkedInCSV(text)
+          if (incoming.length === 0) {
+            const hint = detectedColumns.length > 0
+              ? `Columns found: ${detectedColumns.slice(0, 4).join(', ')}... — Make sure this is the LinkedIn Content Analytics CSV`
+              : 'No data found — Make sure this is the LinkedIn Content Analytics CSV (90-day export)'
+            onResult(false, hint)
+            return
+          }
           const merged = smartMergePosts(member.posts, incoming)
           onUpdate(memberId, { posts: merged })
+          onResult(true)
         } else {
           const incoming = parseICPSignalsCSV(text)
           const merged = smartMergeICP(member.icpSignals, incoming)
           onUpdate(memberId, { icpSignals: merged })
+          onResult(true)
         }
-      } catch { /* ignore */ }
+      } catch (err) { onResult(false, (err as Error).message) }
     }
     reader.readAsText(file)
   }
@@ -446,8 +501,14 @@ function ManageView({ members, onUpdate, onDelete, onAdd, onDone }: {
       const text = e.target?.result as string
       try {
         if (type === 'posts') {
-          const posts = parseLinkedInCSV(text)
-          if (posts.length === 0) { setAddError('No valid post data found. Make sure it\'s a LinkedIn Analytics 90-day CSV.'); return }
+          const { posts, detectedColumns } = parseLinkedInCSV(text)
+          if (posts.length === 0) {
+            const hint = detectedColumns.length > 0
+              ? `Columns found: ${detectedColumns.slice(0, 4).join(', ')}... — Make sure this is the LinkedIn Content Analytics CSV`
+              : 'No valid post data found. Use the LinkedIn Content Analytics 90-day export.'
+            setAddError(hint)
+            return
+          }
           setNewPosts(posts); setNewPostsLoaded(true); setAddError('')
         } else {
           const signals = parseICPSignalsCSV(text)
@@ -572,8 +633,8 @@ function ManageView({ members, onUpdate, onDelete, onAdd, onDone }: {
                     </div>
 
                     <div className="flex flex-wrap items-center gap-2">
-                      <MiniDropZone label="Update Analytics CSV (90d)" onFile={f => handleUpdateFile(m.id, f, 'posts')} />
-                      <MiniDropZone label="Update ICP Signals" onFile={f => handleUpdateFile(m.id, f, 'icp')} />
+                      <MiniDropZone label="Update Analytics CSV (90d)" onFile={(f, cb) => handleUpdateFile(m.id, f, 'posts', cb)} />
+                      <MiniDropZone label="Update ICP Signals" onFile={(f, cb) => handleUpdateFile(m.id, f, 'icp', cb)} />
                     </div>
                   </div>
                 )
