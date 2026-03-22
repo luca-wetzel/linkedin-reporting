@@ -39,12 +39,18 @@ interface ICPSignal {
   isIcp?: boolean
 }
 
+interface FollowerEntry {
+  date: string
+  newFollowers: number
+}
+
 interface Member {
   id: string
   name: string
   role: string
   posts: Post[]
   icpSignals: ICPSignal[]
+  followerHistory: FollowerEntry[]
   addedAt: number
 }
 
@@ -119,8 +125,13 @@ function postsForMonth(posts: Post[], mk: string): Post[] {
   return posts.filter(p => { const d = parseFlexDate(p.date); return d ? monthKey(d) === mk : false })
 }
 
-// Follower growth = sum of "follows" column per month (followers gained from posts)
-function followerGrowthForMonth(posts: Post[], mk: string): number {
+// Follower growth: prefer followerHistory (from XLSX FOLLOWERS sheet), fall back to posts.follows (CSV)
+function followerGrowthForMonth(posts: Post[], followerHistory: FollowerEntry[], mk: string): number {
+  if (followerHistory.length > 0) {
+    return followerHistory
+      .filter(f => { const d = parseFlexDate(f.date); return d ? monthKey(d) === mk : false })
+      .reduce((s, f) => s + f.newFollowers, 0)
+  }
   return postsForMonth(posts, mk).reduce((s, p) => s + p.follows, 0)
 }
 
@@ -202,6 +213,14 @@ function smartMergePosts(existing: Post[], incoming: Post[]): Post[] {
   return result
 }
 
+function smartMergeFollowers(existing: FollowerEntry[], incoming: FollowerEntry[]): FollowerEntry[] {
+  const incomingMap = new Map(incoming.map(f => [f.date, f]))
+  const merged = existing.map(f => incomingMap.get(f.date) ?? f)
+  const existingDates = new Set(existing.map(f => f.date))
+  incoming.forEach(f => { if (!existingDates.has(f.date)) merged.push(f) })
+  return merged
+}
+
 function smartMergeICP(existing: ICPSignal[], incoming: ICPSignal[]): ICPSignal[] {
   // Dedup by date+name+action
   const key = (s: ICPSignal) => `${s.date}|${(s.name ?? '').toLowerCase()}|${s.action.toLowerCase()}`
@@ -217,22 +236,110 @@ function smartMergeICP(existing: ICPSignal[], incoming: ICPSignal[]): ICPSignal[
 
 // ─── File Reader ──────────────────────────────────────────────────────────────
 
-// Reads CSV or XLSX and returns text in CSV format for the parsers below
-function fileToCSVText(file: File): Promise<string> {
-  const isXlsx = /\.(xlsx|xls|xlsm)$/i.test(file.name)
-  if (isXlsx) {
-    return file.arrayBuffer().then(buf => {
-      const wb = XLSX.read(buf)
-      const ws = wb.Sheets[wb.SheetNames[0]]
-      return XLSX.utils.sheet_to_csv(ws)
-    })
+type ParsedLinkedInFile = { posts: Post[]; followerHistory: FollowerEntry[]; detectedColumns: string[] }
+
+// Parse LinkedIn XLSX — reads TOP POSTS sheet (per-post data) + FOLLOWERS sheet (daily follower data)
+function parseLinkedInXLSX(buf: ArrayBuffer): ParsedLinkedInFile {
+  const wb = XLSX.read(buf)
+
+  // Find the right sheets by name (case-insensitive)
+  const findSheet = (...keywords: string[]) =>
+    wb.SheetNames.find(n => keywords.some(k => n.toLowerCase().includes(k)))
+
+  const topPostsName = findSheet('top post', 'top_post', 'posts')
+  const followersName = findSheet('follower')
+
+  // ── TOP POSTS sheet: two side-by-side tables ──────────────────────────────
+  // Left table:  col 0 = Post URL, col 1 = Post publish date, col 2 = Engagements
+  // Right table: col 4 = Post URL, col 5 = Post publish date, col 6 = Impressions
+  const posts: Post[] = []
+  const detectedColumns: string[] = []
+
+  if (topPostsName) {
+    const ws = wb.Sheets[topPostsName]
+    const raw = XLSX.utils.sheet_to_json<string[]>(ws, { header: 1, raw: false, defval: '' }) as string[][]
+
+    // Find header row (contains "Post URL")
+    let headerIdx = raw.findIndex(row => row.join(' ').toLowerCase().includes('post url'))
+    if (headerIdx < 0) headerIdx = 0
+    detectedColumns.push(...(raw[headerIdx] ?? []).filter(Boolean))
+
+    const postMap = new Map<string, Partial<Post>>()
+    for (let i = headerIdx + 1; i < raw.length; i++) {
+      const row = raw[i]
+      // Left table (by Engagements)
+      const urlL = (row[0] ?? '').toString().trim()
+      const dateL = (row[1] ?? '').toString().trim()
+      const engL = parseFloat((row[2] ?? '0').toString().replace(/[^0-9.]/g, '')) || 0
+      if (urlL && dateL) {
+        const ex = postMap.get(urlL) ?? {}
+        postMap.set(urlL, { ...ex, url: urlL, date: dateL, engagements: engL })
+      }
+      // Right table (by Impressions) — col 4-6
+      const urlR = (row[4] ?? '').toString().trim()
+      const dateR = (row[5] ?? '').toString().trim()
+      const impR = parseFloat((row[6] ?? '0').toString().replace(/[^0-9.]/g, '')) || 0
+      if (urlR && dateR) {
+        const ex = postMap.get(urlR) ?? {}
+        postMap.set(urlR, { ...ex, url: urlR, date: dateR, impressions: impR })
+      }
+    }
+
+    for (const p of postMap.values()) {
+      if (!p.date) continue
+      const impressions = p.impressions ?? 0
+      const engagements = p.engagements ?? 0
+      posts.push({
+        date: p.date, url: p.url,
+        impressions, engagements,
+        engagementRate: impressions > 0 ? (engagements / impressions) * 100 : 0,
+        clicks: 0, likes: 0, comments: 0, shares: 0, follows: 0,
+      })
+    }
   }
+
+  // ── FOLLOWERS sheet: Total followers header, then Date | New followers ─────
+  const followerHistory: FollowerEntry[] = []
+  if (followersName) {
+    const ws = wb.Sheets[followersName]
+    const raw = XLSX.utils.sheet_to_json<string[]>(ws, { header: 1, raw: false, defval: '' }) as string[][]
+    // Find header row (contains "Date" and "follower")
+    let headerIdx = raw.findIndex(row => {
+      const s = row.join(' ').toLowerCase()
+      return s.includes('date') && s.includes('follower')
+    })
+    if (headerIdx >= 0) {
+      for (let i = headerIdx + 1; i < raw.length; i++) {
+        const row = raw[i]
+        const date = (row[0] ?? '').toString().trim()
+        const newFollowers = parseFloat((row[1] ?? '0').toString().replace(/[^0-9.]/g, '')) || 0
+        if (date && parseFlexDate(date)) followerHistory.push({ date, newFollowers })
+      }
+    }
+  }
+
+  return { posts: posts.filter(p => p.impressions > 0 || p.engagements > 0), followerHistory, detectedColumns }
+}
+
+// Parse LinkedIn CSV (fallback for CSV exports)
+async function readFileText(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
     reader.onload = e => resolve(e.target?.result as string)
     reader.onerror = reject
     reader.readAsText(file)
   })
+}
+
+async function parseLinkedInFile(file: File): Promise<ParsedLinkedInFile> {
+  const isXlsx = /\.(xlsx|xls|xlsm)$/i.test(file.name)
+  if (isXlsx) {
+    const buf = await file.arrayBuffer()
+    return parseLinkedInXLSX(buf)
+  }
+  const text = await readFileText(file)
+  const { posts, detectedColumns } = parseLinkedInCSV(text)
+  return { posts, followerHistory: [], detectedColumns }
 }
 
 // ─── CSV Parsers ──────────────────────────────────────────────────────────────
@@ -471,7 +578,7 @@ function UploadCard({ type, label, hint, loaded, onFile }: {
 
 function ManageView({ members, onUpdate, onDelete, onAdd, onDone }: {
   members: Member[]
-  onUpdate: (id: string, patch: Partial<Pick<Member, 'name' | 'role' | 'posts' | 'icpSignals'>>) => void
+  onUpdate: (id: string, patch: Partial<Pick<Member, 'name' | 'role' | 'posts' | 'icpSignals' | 'followerHistory'>>) => void
   onDelete: (id: string) => void
   onAdd: (member: Member) => void
   onDone: () => void
@@ -483,6 +590,7 @@ function ManageView({ members, onUpdate, onDelete, onAdd, onDone }: {
   const [newPostsLoaded, setNewPostsLoaded] = useState(false)
   const [newIcpSignals, setNewIcpSignals] = useState<ICPSignal[]>([])
   const [newIcpLoaded, setNewIcpLoaded] = useState(false)
+  const [newFollowerHistory, setNewFollowerHistory] = useState<FollowerEntry[]>([])
   const [addError, setAddError] = useState('')
   const [showInstructions, setShowInstructions] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -490,50 +598,63 @@ function ManageView({ members, onUpdate, onDelete, onAdd, onDone }: {
   const [editRole, setEditRole] = useState('')
 
   function handleUpdateFile(memberId: string, file: File, type: 'posts' | 'icp', onResult: (success: boolean, msg?: string) => void) {
-    fileToCSVText(file).then(text => {
-      const member = members.find(m => m.id === memberId)
-      if (!member) { onResult(false, 'Member not found'); return }
-      if (type === 'posts') {
-        const { posts: incoming, detectedColumns } = parseLinkedInCSV(text)
-        if (incoming.length === 0) {
+    if (type === 'posts') {
+      parseLinkedInFile(file).then(({ posts: incoming, followerHistory: incomingFollowers, detectedColumns }) => {
+        const member = members.find(m => m.id === memberId)
+        if (!member) { onResult(false, 'Member not found'); return }
+        if (incoming.length === 0 && incomingFollowers.length === 0) {
           const hint = detectedColumns.length > 0
-            ? `Columns found: ${detectedColumns.slice(0, 4).join(', ')}… — Make sure this is the LinkedIn Content Analytics export`
-            : 'No data found — use the LinkedIn Content Analytics 90-day export (CSV or XLSX)'
+            ? `Columns found: ${detectedColumns.slice(0, 4).join(', ')}… — use the LinkedIn Analytics XLSX or CSV export`
+            : 'No data found — use the LinkedIn Analytics 90-day XLSX or CSV export'
           onResult(false, hint); return
         }
-        onUpdate(memberId, { posts: smartMergePosts(member.posts, incoming) })
+        onUpdate(memberId, {
+          posts: smartMergePosts(member.posts, incoming),
+          followerHistory: smartMergeFollowers(member.followerHistory, incomingFollowers),
+        })
         onResult(true)
-      } else {
+      }).catch(err => onResult(false, (err as Error).message))
+    } else {
+      readFileText(file).then(text => {
+        const member = members.find(m => m.id === memberId)
+        if (!member) { onResult(false, 'Member not found'); return }
         const incoming = parseICPSignalsCSV(text)
         onUpdate(memberId, { icpSignals: smartMergeICP(member.icpSignals, incoming) })
         onResult(true)
-      }
-    }).catch(err => onResult(false, (err as Error).message))
+      }).catch(err => onResult(false, (err as Error).message))
+    }
   }
 
   function handleNewFile(file: File, type: 'posts' | 'icp') {
-    fileToCSVText(file).then(text => {
-      if (type === 'posts') {
-        const { posts, detectedColumns } = parseLinkedInCSV(text)
-        if (posts.length === 0) {
+    if (type === 'posts') {
+      parseLinkedInFile(file).then(({ posts, followerHistory, detectedColumns }) => {
+        if (posts.length === 0 && followerHistory.length === 0) {
           const hint = detectedColumns.length > 0
-            ? `Columns found: ${detectedColumns.slice(0, 4).join(', ')}… — Make sure this is the LinkedIn Content Analytics export`
-            : 'No valid post data found. Use the LinkedIn Content Analytics 90-day export (CSV or XLSX).'
+            ? `Columns found: ${detectedColumns.slice(0, 4).join(', ')}… — use the LinkedIn Analytics XLSX export`
+            : 'No data found. Upload the LinkedIn Analytics 90-day XLSX or CSV export.'
           setAddError(hint); return
         }
-        setNewPosts(posts); setNewPostsLoaded(true); setAddError('')
-      } else {
+        setNewPosts(posts)
+        setNewIcpSignals(prev => prev) // keep existing
+        // Store follower history temporarily in newIcpSignals? No — store separately
+        setNewPostsLoaded(true)
+        setAddError('')
+        // Stash follower history for addMember
+        setNewFollowerHistory(followerHistory)
+      }).catch(err => setAddError((err as Error).message))
+    } else {
+      readFileText(file).then(text => {
         const signals = parseICPSignalsCSV(text)
         setNewIcpSignals(signals); setNewIcpLoaded(true)
-      }
-    }).catch(err => setAddError((err as Error).message))
+      }).catch(err => setAddError((err as Error).message))
+    }
   }
 
   function addMember() {
     if (!newName.trim() || !newPostsLoaded) return
-    onAdd({ id: uid(), name: newName.trim(), role: newRole.trim(), posts: newPosts, icpSignals: newIcpSignals, addedAt: Date.now() })
+    onAdd({ id: uid(), name: newName.trim(), role: newRole.trim(), posts: newPosts, icpSignals: newIcpSignals, followerHistory: newFollowerHistory, addedAt: Date.now() })
     setNewName(''); setNewRole(''); setNewPosts([]); setNewPostsLoaded(false)
-    setNewIcpSignals([]); setNewIcpLoaded(false); setShowAddForm(false)
+    setNewIcpSignals([]); setNewIcpLoaded(false); setNewFollowerHistory([]); setShowAddForm(false)
   }
 
   return (
@@ -663,7 +784,7 @@ function ManageView({ members, onUpdate, onDelete, onAdd, onDone }: {
           <div className="bg-white border border-[#EDE9E4] rounded-xl p-5">
             <div className="flex items-center justify-between mb-4">
               <p className="text-[10px] font-semibold uppercase tracking-widest text-[#A8A29E]">New Member</p>
-              <button onClick={() => { setShowAddForm(false); setNewName(''); setNewRole(''); setNewPosts([]); setNewPostsLoaded(false); setNewIcpSignals([]); setNewIcpLoaded(false) }}
+              <button onClick={() => { setShowAddForm(false); setNewName(''); setNewRole(''); setNewPosts([]); setNewPostsLoaded(false); setNewIcpSignals([]); setNewIcpLoaded(false); setNewFollowerHistory([]) }}
                 className="text-[#C7BFB8] hover:text-[#78716C]"><X className="w-4 h-4" /></button>
             </div>
             <div className="grid grid-cols-2 gap-3 mb-4">
@@ -705,7 +826,7 @@ function LeaderboardView({ members, selectedMonth }: { members: Member[]; select
   const rows = useMemo(() => {
     return members.map(m => {
       const mp = postsForMonth(m.posts, selectedMonth)
-      const mf = followerGrowthForMonth(m.posts, selectedMonth)
+      const mf = followerGrowthForMonth(m.posts, m.followerHistory, selectedMonth)
       const icp = icpForMonth(m.icpSignals, selectedMonth)
       const impressions = mp.reduce((s, p) => s + p.impressions, 0)
       const avgPerPost = mp.length > 0 ? impressions / mp.length : 0
@@ -817,13 +938,13 @@ function MemberView({ member, goals, onGoalsChange }: {
   const [draftGoals, setDraftGoals] = useState<MemberGoals>(goals)
 
   const mp = useMemo(() => postsForMonth(member.posts, selectedMonth), [member.posts, selectedMonth])
-  const mf = useMemo(() => followerGrowthForMonth(member.posts, selectedMonth), [member.posts, selectedMonth])
+  const mf = useMemo(() => followerGrowthForMonth(member.posts, member.followerHistory, selectedMonth), [member.posts, member.followerHistory, selectedMonth])
   const icpMonth = useMemo(() => icpForMonth(member.icpSignals, selectedMonth), [member.icpSignals, selectedMonth])
 
   const prevMonthIdx = months.indexOf(selectedMonth) + 1
   const prevMonth = months[prevMonthIdx] ?? null
   const prevMp = useMemo(() => prevMonth ? postsForMonth(member.posts, prevMonth) : [], [member.posts, prevMonth])
-  const prevMf = useMemo(() => prevMonth ? followerGrowthForMonth(member.posts, prevMonth) : 0, [member.posts, prevMonth])
+  const prevMf = useMemo(() => prevMonth ? followerGrowthForMonth(member.posts, member.followerHistory, prevMonth) : 0, [member.posts, member.followerHistory, prevMonth])
   const prevIcp = useMemo(() => prevMonth ? icpForMonth(member.icpSignals, prevMonth).length : 0, [member.icpSignals, prevMonth])
 
   const totalImpressions = mp.reduce((s, p) => s + p.impressions, 0)
@@ -845,12 +966,17 @@ function MemberView({ member, goals, onGoalsChange }: {
     return Object.entries(counts).sort((a, b) => b[1] - a[1])
   }, [icpMonth])
 
-  // Monthly follower trend from posts
+  // Monthly follower trend: prefer followerHistory (XLSX), fall back to post.follows (CSV)
   const followerChartData = useMemo(() => {
     const byMonth: Record<string, number> = {}
-    member.posts.forEach(p => { const d = parseFlexDate(p.date); if (d) { const mk = monthKey(d); byMonth[mk] = (byMonth[mk] || 0) + p.follows } })
+    const source = member.followerHistory.length > 0 ? member.followerHistory : []
+    if (source.length > 0) {
+      source.forEach(f => { const d = parseFlexDate(f.date); if (d) { const mk = monthKey(d); byMonth[mk] = (byMonth[mk] || 0) + f.newFollowers } })
+    } else {
+      member.posts.forEach(p => { const d = parseFlexDate(p.date); if (d) { const mk = monthKey(d); byMonth[mk] = (byMonth[mk] || 0) + p.follows } })
+    }
     return Object.entries(byMonth).sort(([a], [b]) => a.localeCompare(b)).slice(-9).map(([date, newFollowers]) => ({ date, newFollowers }))
-  }, [member.posts])
+  }, [member.posts, member.followerHistory])
 
   const chartData = useMemo(() => {
     return [...mp].sort((a, b) => (parseFlexDate(a.date)?.getTime() ?? 0) - (parseFlexDate(b.date)?.getTime() ?? 0))
@@ -1163,7 +1289,7 @@ export default function Page() {
         const { members: m, goals: g } = JSON.parse(saved)
         if (m && m.length > 0) {
           // Migrate old data: add icpSignals if missing
-          const migrated = m.map((mem: Member) => ({ ...mem, icpSignals: mem.icpSignals ?? [] }))
+          const migrated = m.map((mem: Member) => ({ ...mem, icpSignals: mem.icpSignals ?? [], followerHistory: mem.followerHistory ?? [] }))
           setMembers(migrated); setGoals(g ?? {}); setView('dashboard'); setActiveTab('leaderboard')
         }
       }
@@ -1183,7 +1309,7 @@ export default function Page() {
   const [selectedMonth, setSelectedMonth] = useState<string>(() => monthKey(new Date()))
   useEffect(() => { if (allMonthsAcross.length > 0) setSelectedMonth(allMonthsAcross[0]) }, [allMonthsAcross])
 
-  function handleUpdate(id: string, patch: Partial<Pick<Member, 'name' | 'role' | 'posts' | 'icpSignals'>>) {
+  function handleUpdate(id: string, patch: Partial<Pick<Member, 'name' | 'role' | 'posts' | 'icpSignals' | 'followerHistory'>>) {
     setMembers(prev => prev.map(m => m.id === id ? { ...m, ...patch } : m))
   }
 
@@ -1195,6 +1321,7 @@ export default function Page() {
   }
 
   function handleAdd(member: Member) {
+    if (!member.followerHistory) member = { ...member, followerHistory: [] }
     setMembers(prev => [...prev, member])
     setGoals(prev => ({ ...prev, [member.id]: { ...DEFAULT_GOALS } }))
   }
