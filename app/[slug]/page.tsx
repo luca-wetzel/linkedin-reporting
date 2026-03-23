@@ -301,7 +301,7 @@ function parseICPSignalsCSV(text: string): ICPSignal[] {
 // ─── Design Components ────────────────────────────────────────────────────────
 
 function NotusLogo() {
-  return <img src="/logo.svg" alt="notus" className="w-9 h-[46px] flex-shrink-0" />
+  return <img src="/favicon.svg" alt="notus" className="w-9 h-9 flex-shrink-0" />
 }
 
 function SectionLabel({ children }: { children: string }) {
@@ -362,7 +362,7 @@ function GoalBar({ label, current, goal, pace }: {
         <span className="text-sm text-[#4A4A4A]">{label}</span>
         <div className="flex items-center gap-2.5">
           <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full" style={{ backgroundColor: status.bg, color: status.color }}>{status.label}</span>
-          <span className="text-sm font-semibold text-\[#2D2D2D\] tabular-nums">{fmtN(current)} <span className="text-[#D4D4D4] font-normal">/ {fmtN(goal)}</span></span>
+          <span className="text-sm font-semibold text-[#2D2D2D] tabular-nums">{fmtN(current)} <span className="text-[#D4D4D4] font-normal">/ {fmtN(goal)}</span></span>
         </div>
       </div>
       <div className="relative h-1.5 bg-[#EEF1F5] rounded-full overflow-hidden">
@@ -525,7 +525,7 @@ function ManageView({ members, orgName, onUpdate, onDelete, onAdd, onDone }: {
           <div className="flex items-center gap-3">
             <NotusLogo />
             <div>
-              <p className="text-sm font-semibold text-\[#2D2D2D\]">{orgName} — Manage Dashboard</p>
+              <p className="text-sm font-semibold text-[#2D2D2D]">{orgName} — Manage Dashboard</p>
               <p className="text-xs text-[#6B6B6B]">Add, update, or remove team members</p>
             </div>
           </div>
@@ -540,7 +540,7 @@ function ManageView({ members, orgName, onUpdate, onDelete, onAdd, onDone }: {
       <main className="max-w-2xl mx-auto px-6 py-8 space-y-4">
         <div className="bg-white border border-[#E8ECF0] rounded-xl overflow-hidden">
           <button onClick={() => setShowInstructions(s => !s)}
-            className="w-full flex items-center justify-between px-5 py-4 text-sm text-[#4A4A4A] hover:text-\[#2D2D2D\] transition-colors">
+            className="w-full flex items-center justify-between px-5 py-4 text-sm text-[#4A4A4A] hover:text-[#2D2D2D] transition-colors">
             <span className="flex items-center gap-2"><FileText className="w-4 h-4 text-[#D4D4D4]" />How to export from LinkedIn Analytics</span>
             <ChevronDown className={`w-4 h-4 text-[#D4D4D4] transition-transform ${showInstructions ? 'rotate-180' : ''}`} />
           </button>
@@ -584,13 +584,13 @@ function ManageView({ members, orgName, onUpdate, onDelete, onAdd, onDone }: {
                         {isEditing ? (
                           <div className="flex gap-2 flex-1">
                             <input value={editName} onChange={e => setEditName(e.target.value)}
-                              className="flex-1 bg-[#FAF8F3] border border-[#E8ECF0] text-\[#2D2D2D\] text-sm rounded-lg px-3 py-1.5 outline-none" placeholder="Name" />
+                              className="flex-1 bg-[#FAF8F3] border border-[#E8ECF0] text-[#2D2D2D] text-sm rounded-lg px-3 py-1.5 outline-none" placeholder="Name" />
                             <input value={editRole} onChange={e => setEditRole(e.target.value)}
-                              className="flex-1 bg-[#FAF8F3] border border-[#E8ECF0] text-\[#2D2D2D\] text-sm rounded-lg px-3 py-1.5 outline-none" placeholder="Role" />
+                              className="flex-1 bg-[#FAF8F3] border border-[#E8ECF0] text-[#2D2D2D] text-sm rounded-lg px-3 py-1.5 outline-none" placeholder="Role" />
                           </div>
                         ) : (
                           <div className="min-w-0">
-                            <p className="font-semibold text-\[#2D2D2D\] truncate">{m.name}</p>
+                            <p className="font-semibold text-[#2D2D2D] truncate">{m.name}</p>
                             {m.role && <p className="text-xs text-[#6B6B6B]">{m.role}</p>}
                           </div>
                         )}
@@ -646,12 +646,12 @@ function ManageView({ members, orgName, onUpdate, onDelete, onAdd, onDone }: {
               <div>
                 <label className="text-xs text-[#6B6B6B] block mb-1.5">Full Name *</label>
                 <input type="text" value={newName} onChange={e => setNewName(e.target.value)} placeholder="e.g. Daryl Smith"
-                  className="w-full bg-[#FAF8F3] border border-[#E8ECF0] text-\[#2D2D2D\] text-sm rounded-lg px-3 py-2.5 outline-none placeholder:text-[#D4D4D4]" />
+                  className="w-full bg-[#FAF8F3] border border-[#E8ECF0] text-[#2D2D2D] text-sm rounded-lg px-3 py-2.5 outline-none placeholder:text-[#D4D4D4]" />
               </div>
               <div>
                 <label className="text-xs text-[#6B6B6B] block mb-1.5">Role</label>
                 <input type="text" value={newRole} onChange={e => setNewRole(e.target.value)} placeholder="e.g. Loan Officer"
-                  className="w-full bg-[#FAF8F3] border border-[#E8ECF0] text-\[#2D2D2D\] text-sm rounded-lg px-3 py-2.5 outline-none placeholder:text-[#D4D4D4]" />
+                  className="w-full bg-[#FAF8F3] border border-[#E8ECF0] text-[#2D2D2D] text-sm rounded-lg px-3 py-2.5 outline-none placeholder:text-[#D4D4D4]" />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3 mb-4">
@@ -735,14 +735,14 @@ function LeaderboardView({ members, selectedMonth }: { members: Member[]; select
                         {row.member.name.charAt(0).toUpperCase()}
                       </div>
                       <div>
-                        <p className="font-medium text-\[#2D2D2D\]">{row.member.name}</p>
+                        <p className="font-medium text-[#2D2D2D]">{row.member.name}</p>
                         {row.member.role && <p className="text-xs text-[#6B6B6B]">{row.member.role}</p>}
                       </div>
                     </div>
                   </td>
                   <td className="px-5 py-4 text-[#4A4A4A]">{row.postCount}</td>
                   <td className="px-5 py-4">
-                    <span className="font-semibold text-\[#2D2D2D\]">{fmtN(row.impressions)}</span>
+                    <span className="font-semibold text-[#2D2D2D]">{fmtN(row.impressions)}</span>
                     <div className="mt-1.5 h-1 w-20 bg-[#EEF1F5] rounded-full overflow-hidden">
                       <div className="h-full rounded-full" style={{ width: `${(row.impressions / maxImpressions) * 100}%`, backgroundColor: BRAND }} />
                     </div>
@@ -754,7 +754,7 @@ function LeaderboardView({ members, selectedMonth }: { members: Member[]; select
                     <td className="px-5 py-4">
                       {row.icpTotal > 0 ? (
                         <div>
-                          <span className="font-medium text-\[#2D2D2D\]">{row.icpTotal}</span>
+                          <span className="font-medium text-[#2D2D2D]">{row.icpTotal}</span>
                           {row.icpMatched > 0 && <span className="text-xs text-amber-600 ml-1.5">({row.icpMatched} ICP)</span>}
                         </div>
                       ) : '—'}
@@ -861,7 +861,7 @@ function MemberView({ member, goals, onGoalsChange }: {
           </div>
           <div>
             <div className="flex items-center flex-wrap gap-2">
-              <h2 className="text-xl font-semibold text-\[#2D2D2D\]">{member.name}</h2>
+              <h2 className="text-xl font-semibold text-[#2D2D2D]">{member.name}</h2>
               {avgPerPost > 0 && (
                 <span className="text-[10px] font-semibold px-2.5 py-1 rounded-full" style={{ backgroundColor: memberTier.bg, color: memberTier.color }}>
                   {memberTier.label} Creator
@@ -875,7 +875,7 @@ function MemberView({ member, goals, onGoalsChange }: {
           <span className="text-xs text-[#6B6B6B]">Viewing</span>
           <div className="relative">
             <select value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)}
-              className="bg-white border border-[#E8ECF0] text-\[#2D2D2D\] text-sm rounded-lg pl-3 pr-8 py-2 outline-none cursor-pointer appearance-none">
+              className="bg-white border border-[#E8ECF0] text-[#2D2D2D] text-sm rounded-lg pl-3 pr-8 py-2 outline-none cursor-pointer appearance-none">
               {months.map(m => <option key={m} value={m}>{monthLabel(m)}</option>)}
             </select>
             <ChevronDown className="w-3 h-3 text-[#D4D4D4] absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
@@ -946,7 +946,7 @@ function MemberView({ member, goals, onGoalsChange }: {
               <div key={k}>
                 <label className="text-xs text-[#6B6B6B] block mb-1">{k === 'monthlyPosts' ? 'Posts / month' : k === 'monthlyImpressions' ? 'Impressions / month' : k === 'monthlyFollowers' ? 'New Followers / month' : 'ICP Signals / month'}</label>
                 <input type="number" value={draftGoals[k]} onChange={e => setDraftGoals(prev => ({ ...prev, [k]: parseInt(e.target.value) || 0 }))}
-                  className="w-full bg-[#FAF8F3] border border-[#E8ECF0] text-\[#2D2D2D\] text-sm rounded-lg px-3 py-2 outline-none" />
+                  className="w-full bg-[#FAF8F3] border border-[#E8ECF0] text-[#2D2D2D] text-sm rounded-lg px-3 py-2 outline-none" />
               </div>
             ))}
           </div>
@@ -969,8 +969,8 @@ function MemberView({ member, goals, onGoalsChange }: {
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex flex-wrap gap-4 mb-2">
-                <span className="text-sm"><span className="font-semibold text-\[#2D2D2D\]">{fmtN(topPost.impressions)}</span> <span className="text-[#6B6B6B] text-xs">impressions</span></span>
-                {topPost.engagements > 0 && <span className="text-sm"><span className="font-semibold text-\[#2D2D2D\]">{fmtN(topPost.engagements)}</span> <span className="text-[#6B6B6B] text-xs">engagements</span></span>}
+                <span className="text-sm"><span className="font-semibold text-[#2D2D2D]">{fmtN(topPost.impressions)}</span> <span className="text-[#6B6B6B] text-xs">impressions</span></span>
+                {topPost.engagements > 0 && <span className="text-sm"><span className="font-semibold text-[#2D2D2D]">{fmtN(topPost.engagements)}</span> <span className="text-[#6B6B6B] text-xs">engagements</span></span>}
                 <span className="text-sm text-[#6B6B6B] text-xs">{topPost.date}</span>
               </div>
               {topPost.url && (
@@ -1009,7 +1009,7 @@ function MemberView({ member, goals, onGoalsChange }: {
                   <div className="w-24 h-1.5 bg-[#EEF1F5] rounded-full overflow-hidden">
                     <div className="h-full rounded-full" style={{ width: `${(count / icpByAction[0][1]) * 100}%`, backgroundColor: BRAND }} />
                   </div>
-                  <span className="text-sm font-medium text-\[#2D2D2D\] w-6 text-right">{count}</span>
+                  <span className="text-sm font-medium text-[#2D2D2D] w-6 text-right">{count}</span>
                 </div>
               </div>
             ))}
@@ -1105,7 +1105,7 @@ export default function OrgPage({ params }: { params: { slug: string } }) {
     return (
       <div className="min-h-screen bg-[#FEFDFB] flex items-center justify-center">
         <div className="text-center">
-          <p className="text-sm font-medium text-\[#2D2D2D\] mb-1">Dashboard not found</p>
+          <p className="text-sm font-medium text-[#2D2D2D] mb-1">Dashboard not found</p>
           <p className="text-xs text-[#6B6B6B]">{error}</p>
         </div>
       </div>
@@ -1124,7 +1124,7 @@ export default function OrgPage({ params }: { params: { slug: string } }) {
       <aside className="w-44 bg-white border-r border-[#E8ECF0] flex flex-col flex-shrink-0">
         <div className="px-4 py-4 border-b border-[#EEF1F5]">
           <NotusLogo />
-          <p className="text-xs font-semibold text-\[#2D2D2D\] mt-2 truncate">{orgName}</p>
+          <p className="text-xs font-semibold text-[#2D2D2D] mt-2 truncate">{orgName}</p>
         </div>
         <nav className="flex-1 overflow-y-auto px-3 py-3">
           <SectionLabel>Navigation</SectionLabel>
@@ -1157,11 +1157,11 @@ export default function OrgPage({ params }: { params: { slug: string } }) {
         <div className="max-w-5xl mx-auto px-6 py-6">
           {activeTab === 'leaderboard' ? (
             <div className="flex items-center justify-between mb-6">
-              <div><h1 className="text-2xl font-semibold text-\[#2D2D2D\]">Team</h1><p className="text-sm text-[#6B6B6B] mt-0.5">LinkedIn performance overview</p></div>
+              <div><h1 className="text-2xl font-semibold text-[#2D2D2D]">Team</h1><p className="text-sm text-[#6B6B6B] mt-0.5">LinkedIn performance overview</p></div>
               {allMonthsAcross.length > 1 && (
                 <div className="relative">
                   <select value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)}
-                    className="bg-white border border-[#E8ECF0] text-\[#2D2D2D\] text-sm rounded-lg pl-3 pr-8 py-2 outline-none cursor-pointer appearance-none">
+                    className="bg-white border border-[#E8ECF0] text-[#2D2D2D] text-sm rounded-lg pl-3 pr-8 py-2 outline-none cursor-pointer appearance-none">
                     {allMonthsAcross.map(m => <option key={m} value={m}>{monthLabel(m)}</option>)}
                   </select>
                   <ChevronDown className="w-3 h-3 text-[#D4D4D4] absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
@@ -1170,7 +1170,7 @@ export default function OrgPage({ params }: { params: { slug: string } }) {
             </div>
           ) : activeMember ? (
             <div className="mb-6">
-              <h1 className="text-2xl font-semibold text-\[#2D2D2D\]">{activeMember.name}</h1>
+              <h1 className="text-2xl font-semibold text-[#2D2D2D]">{activeMember.name}</h1>
               <p className="text-sm text-[#6B6B6B] mt-0.5">{activeMember.role || 'LinkedIn Performance'}</p>
             </div>
           ) : null}

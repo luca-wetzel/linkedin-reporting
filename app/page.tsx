@@ -13,7 +13,7 @@ interface Org {
 }
 
 function NotusLogo() {
-  return <img src="/logo.svg" alt="notus" className="w-9 h-[46px] flex-shrink-0" />
+  return <img src="/favicon.svg" alt="notus" className="w-9 h-9 flex-shrink-0" />
 }
 
 export default function AdminPage() {
