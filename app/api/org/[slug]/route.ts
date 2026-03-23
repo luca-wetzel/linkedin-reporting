@@ -4,7 +4,7 @@ import { getSupabase } from '@/lib/supabase'
 export async function GET(_req: NextRequest, { params }: { params: { slug: string } }) {
   const { slug } = params
 
-  const { data: org } = await supabase
+  const { data: org } = await getSupabase()
     .from('li_organizations')
     .select('id, slug, name')
     .eq('slug', slug)
@@ -12,7 +12,7 @@ export async function GET(_req: NextRequest, { params }: { params: { slug: strin
 
   if (!org) return NextResponse.json({ error: 'Org not found' }, { status: 404 })
 
-  const { data: members } = await supabase
+  const { data: members } = await getSupabase()
     .from('li_members')
     .select('id, name, role, added_at')
     .eq('org_id', org.id)

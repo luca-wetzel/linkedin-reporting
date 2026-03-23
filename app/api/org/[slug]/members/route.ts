@@ -6,7 +6,7 @@ export async function POST(req: NextRequest, { params }: { params: { slug: strin
   const body = await req.json()
   const { name, role, posts = [], followerHistory = [], icpSignals = [] } = body
 
-  const { data: org } = await supabase
+  const { data: org } = await getSupabase()
     .from('li_organizations')
     .select('id')
     .eq('slug', slug)
@@ -14,7 +14,7 @@ export async function POST(req: NextRequest, { params }: { params: { slug: strin
 
   if (!org) return NextResponse.json({ error: 'Org not found' }, { status: 404 })
 
-  const { data: member, error } = await supabase
+  const { data: member, error } = await getSupabase()
     .from('li_members')
     .insert({ org_id: org.id, name, role: role ?? '' })
     .select()
