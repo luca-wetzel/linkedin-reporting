@@ -39,7 +39,7 @@ export async function POST(req: NextRequest) {
         postMap.set(urlR, { ...existing, url: urlR, date: dateR, impressions: n(row[6]) })
       }
     }
-    for (const p of postMap.values()) {
+    for (const p of Array.from(postMap.values())) {
       if (!p.date) continue
       const imp = p.impressions ?? 0, eng = p.engagements ?? 0
       posts.push({
