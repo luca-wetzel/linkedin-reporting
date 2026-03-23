@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { getSupabase } from '@/lib/supabase'
 
 export async function GET(_req: NextRequest, { params }: { params: { slug: string } }) {
   const { slug } = params
@@ -25,10 +25,10 @@ export async function GET(_req: NextRequest, { params }: { params: { slug: strin
   const memberIds = members.map(m => m.id)
 
   const [postsRes, followersRes, icpRes, goalsRes] = await Promise.all([
-    supabase.from('li_posts').select('*').in('member_id', memberIds),
-    supabase.from('li_follower_history').select('*').in('member_id', memberIds),
-    supabase.from('li_icp_signals').select('*').in('member_id', memberIds),
-    supabase.from('li_goals').select('*').in('member_id', memberIds),
+    getSupabase().from('li_posts').select('*').in('member_id', memberIds),
+    getSupabase().from('li_follower_history').select('*').in('member_id', memberIds),
+    getSupabase().from('li_icp_signals').select('*').in('member_id', memberIds),
+    getSupabase().from('li_goals').select('*').in('member_id', memberIds),
   ])
 
   const posts = postsRes.data ?? []

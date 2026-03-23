@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { getSupabase } from '@/lib/supabase'
 
 // PUT: upsert goals for all members of this org
 export async function PUT(req: NextRequest, { params }: { params: { slug: string } }) {
@@ -19,7 +19,7 @@ export async function PUT(req: NextRequest, { params }: { params: { slug: string
   }))
 
   if (rows.length > 0) {
-    await supabase.from('li_goals').upsert(rows, { onConflict: 'member_id' })
+    await getSupabase().from('li_goals').upsert(rows, { onConflict: 'member_id' })
   }
 
   return NextResponse.json({ ok: true })

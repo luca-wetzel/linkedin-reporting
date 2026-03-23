@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { getSupabase } from '@/lib/supabase'
 
 function checkAdmin(req: NextRequest) {
   return req.headers.get('x-admin-password') === process.env.ADMIN_PASSWORD
@@ -7,6 +7,6 @@ function checkAdmin(req: NextRequest) {
 
 export async function DELETE(req: NextRequest, { params }: { params: { slug: string } }) {
   if (!checkAdmin(req)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  await supabase.from('li_organizations').delete().eq('slug', params.slug)
+  await getSupabase().from('li_organizations').delete().eq('slug', params.slug)
   return NextResponse.json({ ok: true })
 }

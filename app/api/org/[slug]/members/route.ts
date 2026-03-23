@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { getSupabase } from '@/lib/supabase'
 
 export async function POST(req: NextRequest, { params }: { params: { slug: string } }) {
   const { slug } = params
@@ -22,7 +22,7 @@ export async function POST(req: NextRequest, { params }: { params: { slug: strin
 
   if (error || !member) return NextResponse.json({ error: error?.message }, { status: 500 })
 
-  await supabase.from('li_goals').insert({
+  await getSupabase().from('li_goals').insert({
     member_id: member.id,
     monthly_posts: 8,
     monthly_impressions: 10000,
@@ -31,19 +31,19 @@ export async function POST(req: NextRequest, { params }: { params: { slug: strin
   })
 
   if (posts.length > 0) {
-    await supabase.from('li_posts').insert(
+    await getSupabase().from('li_posts').insert(
       posts.map((p: Record<string, unknown>) => ({ member_id: member.id, ...flatPost(p) }))
     )
   }
   if (followerHistory.length > 0) {
-    await supabase.from('li_follower_history').insert(
+    await getSupabase().from('li_follower_history').insert(
       followerHistory.map((f: { date: string; newFollowers: number }) => ({
         member_id: member.id, date: f.date, new_followers: f.newFollowers,
       }))
     )
   }
   if (icpSignals.length > 0) {
-    await supabase.from('li_icp_signals').insert(
+    await getSupabase().from('li_icp_signals').insert(
       icpSignals.map((s: Record<string, unknown>) => ({ member_id: member.id, ...flatSignal(s) }))
     )
   }
