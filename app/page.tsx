@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { Plus, Trash2, ExternalLink } from 'lucide-react'
 
-const BRAND = '#7C2D2D'
+const BRAND = '#722F37'
 
 interface Org {
   id: string
@@ -13,11 +13,7 @@ interface Org {
 }
 
 function NotusLogo() {
-  return (
-    <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0" style={{ backgroundColor: BRAND }}>
-      <span className="text-white font-bold text-xl leading-none" style={{ fontFamily: 'Georgia, serif' }}>n</span>
-    </div>
-  )
+  return <img src="/logo.svg" alt="notus" className="w-9 h-[46px] flex-shrink-0" />
 }
 
 export default function AdminPage() {
@@ -82,13 +78,13 @@ export default function AdminPage() {
 
   if (!authed) {
     return (
-      <div className="min-h-screen bg-[#F6F3EF] flex items-center justify-center">
-        <div className="bg-white border border-[#EDE9E4] rounded-2xl p-8 w-80 shadow-sm">
+      <div className="min-h-screen bg-[#FEFDFB] flex items-center justify-center">
+        <div className="bg-white border border-[#E8ECF0] rounded-2xl p-8 w-80 shadow-sm">
           <div className="flex items-center gap-3 mb-6">
             <NotusLogo />
             <div>
-              <p className="text-sm font-semibold text-[#1C1917]">Admin Panel</p>
-              <p className="text-xs text-[#A8A29E]">notus dashboard management</p>
+              <p className="text-sm font-semibold text-[#2D2D2D]">Admin Panel</p>
+              <p className="text-xs text-[#6B6B6B]">notus dashboard management</p>
             </div>
           </div>
           <input
@@ -97,7 +93,7 @@ export default function AdminPage() {
             value={password}
             onChange={e => setPassword(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && login()}
-            className="w-full bg-[#FAFAF9] border border-[#EDE9E4] text-[#1C1917] text-sm rounded-lg px-3 py-2.5 outline-none placeholder:text-[#C7BFB8] mb-3"
+            className="w-full bg-[#FAF8F3] border border-[#E8ECF0] text-[#2D2D2D] text-sm rounded-lg px-3 py-2.5 outline-none placeholder:text-[#D4D4D4] mb-3"
           />
           {authError && <p className="text-xs text-red-500 mb-3">{authError}</p>}
           <button onClick={login} disabled={loading || !password}
@@ -111,14 +107,14 @@ export default function AdminPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F6F3EF]">
-      <header className="bg-white border-b border-[#EDE9E4] px-6 py-4">
+    <div className="min-h-screen bg-[#FEFDFB]">
+      <header className="bg-white border-b border-[#E8ECF0] px-6 py-4">
         <div className="max-w-2xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
             <NotusLogo />
             <div>
-              <p className="text-sm font-semibold text-[#1C1917]">Dashboard Admin</p>
-              <p className="text-xs text-[#A8A29E]">Manage client organizations</p>
+              <p className="text-sm font-semibold text-[#2D2D2D]">Dashboard Admin</p>
+              <p className="text-xs text-[#6B6B6B]">Manage client organizations</p>
             </div>
           </div>
           <button onClick={() => setShowCreate(s => !s)}
@@ -131,29 +127,29 @@ export default function AdminPage() {
 
       <main className="max-w-2xl mx-auto px-6 py-8 space-y-4">
         {showCreate && (
-          <div className="bg-white border border-[#EDE9E4] rounded-xl p-5">
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-[#A8A29E] mb-4">New Organization</p>
+          <div className="bg-white border border-[#E8ECF0] rounded-xl p-5">
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-[#6B6B6B] mb-4">New Organization</p>
             <div className="grid grid-cols-2 gap-3 mb-4">
               <div>
-                <label className="text-xs text-[#A8A29E] block mb-1.5">Name *</label>
+                <label className="text-xs text-[#6B6B6B] block mb-1.5">Name *</label>
                 <input value={newName} onChange={e => setNewName(e.target.value)} placeholder="e.g. FBF"
-                  className="w-full bg-[#FAFAF9] border border-[#EDE9E4] text-[#1C1917] text-sm rounded-lg px-3 py-2.5 outline-none placeholder:text-[#C7BFB8]" />
+                  className="w-full bg-[#FAF8F3] border border-[#E8ECF0] text-[#2D2D2D] text-sm rounded-lg px-3 py-2.5 outline-none placeholder:text-[#D4D4D4]" />
               </div>
               <div>
-                <label className="text-xs text-[#A8A29E] block mb-1.5">Slug (URL) *</label>
+                <label className="text-xs text-[#6B6B6B] block mb-1.5">Slug (URL) *</label>
                 <input value={newSlug} onChange={e => setNewSlug(e.target.value)} placeholder="e.g. fbf"
-                  className="w-full bg-[#FAFAF9] border border-[#EDE9E4] text-[#1C1917] text-sm rounded-lg px-3 py-2.5 outline-none placeholder:text-[#C7BFB8]" />
+                  className="w-full bg-[#FAF8F3] border border-[#E8ECF0] text-[#2D2D2D] text-sm rounded-lg px-3 py-2.5 outline-none placeholder:text-[#D4D4D4]" />
               </div>
             </div>
             {createError && <p className="text-xs text-red-500 mb-3">{createError}</p>}
-            <p className="text-xs text-[#A8A29E] mb-3">Dashboard will be at <span className="font-mono text-[#78716C]">yourdomain.com/{newSlug || 'slug'}</span></p>
+            <p className="text-xs text-[#6B6B6B] mb-3">Dashboard will be at <span className="font-mono text-[#4A4A4A]">yourdomain.com/{newSlug || 'slug'}</span></p>
             <div className="flex gap-2">
               <button onClick={createOrg} disabled={creating || !newSlug.trim() || !newName.trim()}
                 className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-white disabled:opacity-40"
                 style={{ backgroundColor: BRAND }}>
                 {creating ? 'Creating…' : 'Create Organization'}
               </button>
-              <button onClick={() => setShowCreate(false)} className="px-4 py-2.5 rounded-xl text-sm text-[#78716C] border border-[#EDE9E4]">
+              <button onClick={() => setShowCreate(false)} className="px-4 py-2.5 rounded-xl text-sm text-[#4A4A4A] border border-[#E8ECF0]">
                 Cancel
               </button>
             </div>
@@ -161,36 +157,36 @@ export default function AdminPage() {
         )}
 
         <div>
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-[#A8A29E] mb-3">Organizations ({orgs.length})</p>
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-[#6B6B6B] mb-3">Organizations ({orgs.length})</p>
           {orgs.length === 0 ? (
-            <div className="bg-white border border-dashed border-[#EDE9E4] rounded-xl p-8 text-center">
-              <p className="text-sm text-[#A8A29E]">No organizations yet. Create one above.</p>
+            <div className="bg-white border border-dashed border-[#E8ECF0] rounded-xl p-8 text-center">
+              <p className="text-sm text-[#6B6B6B]">No organizations yet. Create one above.</p>
             </div>
           ) : (
             <div className="space-y-3">
               {orgs.map(org => (
-                <div key={org.id} className="bg-white border border-[#EDE9E4] rounded-xl p-5 flex items-center justify-between gap-4">
+                <div key={org.id} className="bg-white border border-[#E8ECF0] rounded-xl p-5 flex items-center justify-between gap-4">
                   <div className="flex items-center gap-3 min-w-0">
                     <div className="w-9 h-9 rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0"
                       style={{ backgroundColor: BRAND }}>
                       {org.name.charAt(0).toUpperCase()}
                     </div>
                     <div className="min-w-0">
-                      <p className="font-semibold text-[#1C1917]">{org.name}</p>
-                      <p className="text-xs text-[#A8A29E] font-mono">/{org.slug}</p>
+                      <p className="font-semibold text-[#2D2D2D]">{org.name}</p>
+                      <p className="text-xs text-[#6B6B6B] font-mono">/{org.slug}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
                     <a href={`/${org.slug}`} target="_blank" rel="noopener noreferrer"
-                      className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg border border-[#EDE9E4] text-[#78716C] hover:bg-[#F6F3EF] transition-colors">
+                      className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg border border-[#E8ECF0] text-[#4A4A4A] hover:bg-[#FEFDFB] transition-colors">
                       <ExternalLink className="w-3 h-3" /> Open
                     </a>
                     <button onClick={() => navigator.clipboard.writeText(`${window.location.origin}/${org.slug}`)}
-                      className="text-xs font-medium px-3 py-1.5 rounded-lg border border-[#EDE9E4] text-[#78716C] hover:bg-[#F6F3EF] transition-colors">
+                      className="text-xs font-medium px-3 py-1.5 rounded-lg border border-[#E8ECF0] text-[#4A4A4A] hover:bg-[#FEFDFB] transition-colors">
                       Copy Link
                     </button>
                     <button onClick={() => deleteOrg(org.slug, org.name)}
-                      className="text-[#C7BFB8] hover:text-red-400 p-1.5 rounded hover:bg-red-50 transition-colors">
+                      className="text-[#D4D4D4] hover:text-red-400 p-1.5 rounded hover:bg-red-50 transition-colors">
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
                   </div>

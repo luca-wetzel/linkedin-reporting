@@ -5,8 +5,9 @@ import './globals.css'
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' })
 
 export const metadata: Metadata = {
-  title: 'FBF LinkedIn Dashboard',
+  title: 'LinkedIn Dashboard — notus',
   description: 'LinkedIn performance analytics by notus',
+  icons: { icon: '/favicon.svg' },
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

@@ -82,8 +82,8 @@ const DEFAULT_GOALS: MemberGoals = {
   monthlyIcpSignals: 20,
 }
 
-const BRAND = '#7C2D2D'
-const BRAND_LIGHT = '#F5EDED'
+const BRAND = '#722F37'
+const BRAND_LIGHT = '#F4ECED'
 
 // ─── Utilities ────────────────────────────────────────────────────────────────
 
@@ -301,16 +301,12 @@ function parseICPSignalsCSV(text: string): ICPSignal[] {
 // ─── Design Components ────────────────────────────────────────────────────────
 
 function NotusLogo() {
-  return (
-    <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0" style={{ backgroundColor: BRAND }}>
-      <span className="text-white font-bold text-xl leading-none" style={{ fontFamily: 'Georgia, serif' }}>n</span>
-    </div>
-  )
+  return <img src="/logo.svg" alt="notus" className="w-9 h-[46px] flex-shrink-0" />
 }
 
 function SectionLabel({ children }: { children: string }) {
   return (
-    <p className="text-[10px] font-semibold uppercase tracking-widest text-[#A8A29E] px-3 mb-1.5 mt-4 first:mt-0">
+    <p className="text-[10px] font-semibold uppercase tracking-widest text-[#6B6B6B] px-3 mb-1.5 mt-4 first:mt-0">
       {children}
     </p>
   )
@@ -330,7 +326,7 @@ function NavItem({ label, active, onClick, icon, onDelete }: {
       </button>
       {onDelete && hovered && (
         <button onClick={e => { e.stopPropagation(); onDelete() }}
-          className="absolute right-2 top-1/2 -translate-y-1/2 w-5 h-5 rounded flex items-center justify-center text-[#C7BFB8] hover:text-red-400 hover:bg-red-50 transition-colors"
+          className="absolute right-2 top-1/2 -translate-y-1/2 w-5 h-5 rounded flex items-center justify-center text-[#D4D4D4] hover:text-red-400 hover:bg-red-50 transition-colors"
           title="Remove">
           <X className="w-3 h-3" />
         </button>
@@ -343,11 +339,11 @@ function StatCard({ label, value, sub, trend }: {
   label: string; value: string; sub?: string; trend?: { text: string; positive: boolean } | null
 }) {
   return (
-    <div className="bg-white rounded-xl border border-[#EDE9E4] p-5">
-      <p className="text-[10px] font-semibold uppercase tracking-widest text-[#A8A29E] mb-3">{label}</p>
-      <p className="text-3xl font-bold text-[#1C1917] mb-1.5 leading-none">{value}</p>
+    <div className="bg-white rounded-xl border border-[#E8ECF0] p-5" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04)' }}>
+      <p className="text-[10px] font-semibold uppercase tracking-widest text-[#6B6B6B] mb-3">{label}</p>
+      <p className="text-3xl font-bold text-[#2D2D2D] mb-1.5 leading-none">{value}</p>
       {trend && <p className={`text-xs font-medium mb-1 ${trend.positive ? 'text-green-600' : 'text-red-500'}`}>{trend.positive ? '↑' : '↓'} {trend.text}</p>}
-      {sub && <p className="text-[11px] text-[#A8A29E] leading-snug">{sub}</p>}
+      {sub && <p className="text-[11px] text-[#6B6B6B] leading-snug">{sub}</p>}
     </div>
   )
 }
@@ -363,13 +359,13 @@ function GoalBar({ label, current, goal, pace }: {
   return (
     <div>
       <div className="flex items-center justify-between mb-2">
-        <span className="text-sm text-[#78716C]">{label}</span>
+        <span className="text-sm text-[#4A4A4A]">{label}</span>
         <div className="flex items-center gap-2.5">
           <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full" style={{ backgroundColor: status.bg, color: status.color }}>{status.label}</span>
-          <span className="text-sm font-semibold text-[#1C1917] tabular-nums">{fmtN(current)} <span className="text-[#C7BFB8] font-normal">/ {fmtN(goal)}</span></span>
+          <span className="text-sm font-semibold text-\[#2D2D2D\] tabular-nums">{fmtN(current)} <span className="text-[#D4D4D4] font-normal">/ {fmtN(goal)}</span></span>
         </div>
       </div>
-      <div className="relative h-1.5 bg-[#F0EBE5] rounded-full overflow-hidden">
+      <div className="relative h-1.5 bg-[#EEF1F5] rounded-full overflow-hidden">
         <div className="absolute inset-y-0 left-0 rounded-full transition-all duration-500" style={{ width: `${pct}%`, backgroundColor: status.color }} />
         {pace && timePct > 0 && timePct < 100 && <div className="absolute inset-y-0 w-px bg-[#C7BFB8]" style={{ left: `${timePct}%` }} />}
       </div>
@@ -396,7 +392,7 @@ function MiniDropZone({ label, onFile }: {
     ? { borderColor: '#16A34A', backgroundColor: '#F0FDF4', color: '#16A34A' }
     : status === 'err'
     ? { borderColor: '#DC2626', backgroundColor: '#FEF2F2', color: '#DC2626' }
-    : { borderColor: '#EDE9E4', backgroundColor: 'white', color: '#78716C' }
+    : { borderColor: '#E8ECF0', backgroundColor: 'white', color: '#78716C' }
   return (
     <div className="flex flex-col gap-1">
       <input ref={ref} type="file" accept=".csv,.xlsx,.xls,.xlsm" style={{ display: 'none' }}
@@ -419,16 +415,16 @@ function UploadCard({ type, label, hint, loaded, onFile }: {
   return (
     <div onClick={() => ref.current?.click()}
       className="border-2 border-dashed rounded-xl p-5 cursor-pointer transition-all text-center"
-      style={loaded ? { borderColor: '#16A34A', backgroundColor: '#F0FDF4' } : { borderColor: '#E7E0D8', backgroundColor: '#FAFAF9' }}>
+      style={loaded ? { borderColor: '#16A34A', backgroundColor: '#F0FDF4' } : { borderColor: '#E7E0D8', backgroundColor: '#FAF8F3' }}>
       <input ref={ref} type="file" accept=".csv,.xlsx,.xls,.xlsm" style={{ display: 'none' }}
         onChange={e => { const f = e.target.files?.[0]; if (f) onFile(f, type); e.target.value = '' }} />
       {loaded ? (
         <><div className="w-7 h-7 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-1.5"><span className="text-green-600 font-bold text-sm">✓</span></div>
           <p className="text-sm font-medium text-green-700">{label} loaded</p></>
       ) : (
-        <><Upload className="w-5 h-5 text-[#C7BFB8] mx-auto mb-1.5" />
-          <p className="text-sm font-medium text-[#78716C]">{label}</p>
-          <p className="text-xs text-[#A8A29E] mt-0.5">{hint}</p></>
+        <><Upload className="w-5 h-5 text-[#D4D4D4] mx-auto mb-1.5" />
+          <p className="text-sm font-medium text-[#4A4A4A]">{label}</p>
+          <p className="text-xs text-[#6B6B6B] mt-0.5">{hint}</p></>
       )}
     </div>
   )
@@ -523,14 +519,14 @@ function ManageView({ members, orgName, onUpdate, onDelete, onAdd, onDone }: {
   }
 
   return (
-    <div className="min-h-screen bg-[#F6F3EF]">
-      <header className="bg-white border-b border-[#EDE9E4] px-6 py-4">
+    <div className="min-h-screen bg-[#FEFDFB]">
+      <header className="bg-white border-b border-[#E8ECF0] px-6 py-4">
         <div className="max-w-2xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
             <NotusLogo />
             <div>
-              <p className="text-sm font-semibold text-[#1C1917]">{orgName} — Manage Dashboard</p>
-              <p className="text-xs text-[#A8A29E]">Add, update, or remove team members</p>
+              <p className="text-sm font-semibold text-\[#2D2D2D\]">{orgName} — Manage Dashboard</p>
+              <p className="text-xs text-[#6B6B6B]">Add, update, or remove team members</p>
             </div>
           </div>
           {members.length > 0 && (
@@ -542,27 +538,27 @@ function ManageView({ members, orgName, onUpdate, onDelete, onAdd, onDone }: {
       </header>
 
       <main className="max-w-2xl mx-auto px-6 py-8 space-y-4">
-        <div className="bg-white border border-[#EDE9E4] rounded-xl overflow-hidden">
+        <div className="bg-white border border-[#E8ECF0] rounded-xl overflow-hidden">
           <button onClick={() => setShowInstructions(s => !s)}
-            className="w-full flex items-center justify-between px-5 py-4 text-sm text-[#78716C] hover:text-[#1C1917] transition-colors">
-            <span className="flex items-center gap-2"><FileText className="w-4 h-4 text-[#C7BFB8]" />How to export from LinkedIn Analytics</span>
-            <ChevronDown className={`w-4 h-4 text-[#C7BFB8] transition-transform ${showInstructions ? 'rotate-180' : ''}`} />
+            className="w-full flex items-center justify-between px-5 py-4 text-sm text-[#4A4A4A] hover:text-\[#2D2D2D\] transition-colors">
+            <span className="flex items-center gap-2"><FileText className="w-4 h-4 text-[#D4D4D4]" />How to export from LinkedIn Analytics</span>
+            <ChevronDown className={`w-4 h-4 text-[#D4D4D4] transition-transform ${showInstructions ? 'rotate-180' : ''}`} />
           </button>
           {showInstructions && (
-            <div className="px-5 pb-5 border-t border-[#F0EBE5] pt-4 space-y-4">
+            <div className="px-5 pb-5 border-t border-[#EEF1F5] pt-4 space-y-4">
               <div>
                 <p className="text-[10px] font-semibold uppercase tracking-widest mb-2" style={{ color: BRAND }}>LinkedIn Analytics CSV (90-day export)</p>
-                <ol className="text-xs text-[#78716C] space-y-1 list-decimal list-inside leading-relaxed">
-                  <li>Go to your LinkedIn profile → click <strong className="text-[#44403C]">Analytics</strong></li>
-                  <li>Click <strong className="text-[#44403C]">Content</strong> in the top nav</li>
-                  <li>Set the date range to <strong className="text-[#44403C]">last 90 days</strong></li>
-                  <li>Click <strong className="text-[#44403C]">Export</strong> → download the CSV</li>
+                <ol className="text-xs text-[#4A4A4A] space-y-1 list-decimal list-inside leading-relaxed">
+                  <li>Go to your LinkedIn profile → click <strong className="text-[#2D2D2D]">Analytics</strong></li>
+                  <li>Click <strong className="text-[#2D2D2D]">Content</strong> in the top nav</li>
+                  <li>Set the date range to <strong className="text-[#2D2D2D]">last 90 days</strong></li>
+                  <li>Click <strong className="text-[#2D2D2D]">Export</strong> → download the CSV</li>
                 </ol>
-                <p className="text-xs text-[#A8A29E] mt-2 italic">Export as CSV or XLSX — both work. Always export 90 days. The dashboard merges intelligently — no duplicates.</p>
+                <p className="text-xs text-[#6B6B6B] mt-2 italic">Export as CSV or XLSX — both work. Always export 90 days. The dashboard merges intelligently — no duplicates.</p>
               </div>
               <div>
                 <p className="text-[10px] font-semibold uppercase tracking-widest mb-2" style={{ color: BRAND }}>ICP Signals CSV (optional — from notus)</p>
-                <p className="text-xs text-[#78716C] leading-relaxed">Export the ICP signal tracking data from notus. Expected columns: Date, Name, Company, Title, Action, ICP Match (true/false).</p>
+                <p className="text-xs text-[#4A4A4A] leading-relaxed">Export the ICP signal tracking data from notus. Expected columns: Date, Name, Company, Title, Action, ICP Match (true/false).</p>
               </div>
             </div>
           )}
@@ -570,7 +566,7 @@ function ManageView({ members, orgName, onUpdate, onDelete, onAdd, onDone }: {
 
         {members.length > 0 && (
           <div>
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-[#A8A29E] mb-3">Team Members</p>
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-[#6B6B6B] mb-3">Team Members</p>
             <div className="space-y-3">
               {members.map(m => {
                 const months = uniqueMonths(m.posts)
@@ -579,7 +575,7 @@ function ManageView({ members, orgName, onUpdate, onDelete, onAdd, onDone }: {
                 const latestImpressions = latestPosts.reduce((s, p) => s + p.impressions, 0)
                 const isEditing = editingId === m.id
                 return (
-                  <div key={m.id} className="bg-white border border-[#EDE9E4] rounded-xl p-5">
+                  <div key={m.id} className="bg-white border border-[#E8ECF0] rounded-xl p-5">
                     <div className="flex items-start justify-between gap-3 mb-3">
                       <div className="flex items-center gap-3 flex-1 min-w-0">
                         <div className="w-9 h-9 rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0" style={{ backgroundColor: BRAND }}>
@@ -588,14 +584,14 @@ function ManageView({ members, orgName, onUpdate, onDelete, onAdd, onDone }: {
                         {isEditing ? (
                           <div className="flex gap-2 flex-1">
                             <input value={editName} onChange={e => setEditName(e.target.value)}
-                              className="flex-1 bg-[#FAFAF9] border border-[#EDE9E4] text-[#1C1917] text-sm rounded-lg px-3 py-1.5 outline-none" placeholder="Name" />
+                              className="flex-1 bg-[#FAF8F3] border border-[#E8ECF0] text-\[#2D2D2D\] text-sm rounded-lg px-3 py-1.5 outline-none" placeholder="Name" />
                             <input value={editRole} onChange={e => setEditRole(e.target.value)}
-                              className="flex-1 bg-[#FAFAF9] border border-[#EDE9E4] text-[#1C1917] text-sm rounded-lg px-3 py-1.5 outline-none" placeholder="Role" />
+                              className="flex-1 bg-[#FAF8F3] border border-[#E8ECF0] text-\[#2D2D2D\] text-sm rounded-lg px-3 py-1.5 outline-none" placeholder="Role" />
                           </div>
                         ) : (
                           <div className="min-w-0">
-                            <p className="font-semibold text-[#1C1917] truncate">{m.name}</p>
-                            {m.role && <p className="text-xs text-[#A8A29E]">{m.role}</p>}
+                            <p className="font-semibold text-\[#2D2D2D\] truncate">{m.name}</p>
+                            {m.role && <p className="text-xs text-[#6B6B6B]">{m.role}</p>}
                           </div>
                         )}
                       </div>
@@ -604,24 +600,24 @@ function ManageView({ members, orgName, onUpdate, onDelete, onAdd, onDone }: {
                           <>
                             <button onClick={() => { onUpdate(m.id, { name: editName.trim(), role: editRole.trim() }); setEditingId(null) }}
                               className="text-xs font-medium px-2.5 py-1 rounded-lg text-white" style={{ backgroundColor: BRAND }}>Save</button>
-                            <button onClick={() => setEditingId(null)} className="text-xs text-[#A8A29E]">Cancel</button>
+                            <button onClick={() => setEditingId(null)} className="text-xs text-[#6B6B6B]">Cancel</button>
                           </>
                         ) : (
                           <>
                             <button onClick={() => { setEditingId(m.id); setEditName(m.name); setEditRole(m.role) }}
-                              className="text-xs text-[#A8A29E] hover:text-[#78716C] px-2 py-1 rounded hover:bg-[#F6F3EF]">Edit</button>
+                              className="text-xs text-[#6B6B6B] hover:text-[#4A4A4A] px-2 py-1 rounded hover:bg-[#FEFDFB]">Edit</button>
                             <button onClick={() => { if (confirm(`Remove ${m.name}?`)) onDelete(m.id) }}
-                              className="text-[#C7BFB8] hover:text-red-400 px-2 py-1 rounded hover:bg-red-50 transition-colors">
+                              className="text-[#D4D4D4] hover:text-red-400 px-2 py-1 rounded hover:bg-red-50 transition-colors">
                               <Trash2 className="w-3.5 h-3.5" />
                             </button>
                           </>
                         )}
                       </div>
                     </div>
-                    <div className="flex flex-wrap items-center gap-3 mb-3 text-xs text-[#A8A29E]">
+                    <div className="flex flex-wrap items-center gap-3 mb-3 text-xs text-[#6B6B6B]">
                       <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-green-400 inline-block" />{m.posts.length} posts loaded</span>
                       {m.icpSignals.length > 0 && <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-amber-400 inline-block" />{m.icpSignals.length} ICP signals</span>}
-                      {latest && <span className="text-[#C7BFB8]">Latest: {monthLabel(latest)} · {fmtN(latestImpressions)} impr.</span>}
+                      {latest && <span className="text-[#D4D4D4]">Latest: {monthLabel(latest)} · {fmtN(latestImpressions)} impr.</span>}
                     </div>
                     <div className="flex flex-wrap items-center gap-2">
                       <MiniDropZone label="Update Analytics (90d)" onFile={(f, cb) => handleUpdateFile(m.id, f, 'posts', cb)} />
@@ -636,26 +632,26 @@ function ManageView({ members, orgName, onUpdate, onDelete, onAdd, onDone }: {
 
         {!showAddForm ? (
           <button onClick={() => setShowAddForm(true)}
-            className="w-full flex items-center justify-center gap-2 py-3.5 border-2 border-dashed border-[#EDE9E4] rounded-xl text-sm text-[#A8A29E] hover:border-[#C7BFB8] hover:text-[#78716C] transition-colors bg-white">
+            className="w-full flex items-center justify-center gap-2 py-3.5 border-2 border-dashed border-[#E8ECF0] rounded-xl text-sm text-[#6B6B6B] hover:border-[#C7BFB8] hover:text-[#4A4A4A] transition-colors bg-white">
             <Plus className="w-4 h-4" />Add team member
           </button>
         ) : (
-          <div className="bg-white border border-[#EDE9E4] rounded-xl p-5">
+          <div className="bg-white border border-[#E8ECF0] rounded-xl p-5">
             <div className="flex items-center justify-between mb-4">
-              <p className="text-[10px] font-semibold uppercase tracking-widest text-[#A8A29E]">New Member</p>
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-[#6B6B6B]">New Member</p>
               <button onClick={() => { setShowAddForm(false); setNewName(''); setNewRole(''); setNewPosts([]); setNewPostsLoaded(false); setNewIcpSignals([]); setNewIcpLoaded(false); setNewFollowerHistory([]) }}
-                className="text-[#C7BFB8] hover:text-[#78716C]"><X className="w-4 h-4" /></button>
+                className="text-[#D4D4D4] hover:text-[#4A4A4A]"><X className="w-4 h-4" /></button>
             </div>
             <div className="grid grid-cols-2 gap-3 mb-4">
               <div>
-                <label className="text-xs text-[#A8A29E] block mb-1.5">Full Name *</label>
+                <label className="text-xs text-[#6B6B6B] block mb-1.5">Full Name *</label>
                 <input type="text" value={newName} onChange={e => setNewName(e.target.value)} placeholder="e.g. Daryl Smith"
-                  className="w-full bg-[#FAFAF9] border border-[#EDE9E4] text-[#1C1917] text-sm rounded-lg px-3 py-2.5 outline-none placeholder:text-[#C7BFB8]" />
+                  className="w-full bg-[#FAF8F3] border border-[#E8ECF0] text-\[#2D2D2D\] text-sm rounded-lg px-3 py-2.5 outline-none placeholder:text-[#D4D4D4]" />
               </div>
               <div>
-                <label className="text-xs text-[#A8A29E] block mb-1.5">Role</label>
+                <label className="text-xs text-[#6B6B6B] block mb-1.5">Role</label>
                 <input type="text" value={newRole} onChange={e => setNewRole(e.target.value)} placeholder="e.g. Loan Officer"
-                  className="w-full bg-[#FAFAF9] border border-[#EDE9E4] text-[#1C1917] text-sm rounded-lg px-3 py-2.5 outline-none placeholder:text-[#C7BFB8]" />
+                  className="w-full bg-[#FAF8F3] border border-[#E8ECF0] text-\[#2D2D2D\] text-sm rounded-lg px-3 py-2.5 outline-none placeholder:text-[#D4D4D4]" />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3 mb-4">
@@ -672,7 +668,7 @@ function ManageView({ members, orgName, onUpdate, onDelete, onAdd, onDone }: {
         )}
 
         {members.length > 0 && (
-          <button onClick={onDone} className="w-full py-3 rounded-xl text-sm font-medium border border-[#EDE9E4] text-[#78716C] hover:bg-white transition-colors">
+          <button onClick={onDone} className="w-full py-3 rounded-xl text-sm font-medium border border-[#E8ECF0] text-[#4A4A4A] hover:bg-white transition-colors">
             Done — Back to Dashboard
           </button>
         )}
@@ -713,24 +709,24 @@ function LeaderboardView({ members, selectedMonth }: { members: Member[]; select
         <StatCard label="Follower Growth" value={`+${fmtN(totalFollowers)}`} sub={monthLabel(selectedMonth)} />
         {hasIcp && <StatCard label="ICP Signals" value={fmtN(totalIcp)} sub="Total LinkedIn signals this month" />}
       </div>
-      <div className="bg-white border border-[#EDE9E4] rounded-xl overflow-hidden">
-        <div className="px-6 py-4 border-b border-[#F0EBE5]">
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-[#A8A29E]">Leaderboard — {monthLabel(selectedMonth)}</p>
+      <div className="bg-white border border-[#E8ECF0] rounded-xl overflow-hidden">
+        <div className="px-6 py-4 border-b border-[#EEF1F5]">
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-[#6B6B6B]">Leaderboard — {monthLabel(selectedMonth)}</p>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-[#F6F3EF]">
+              <tr className="border-b border-[#FEFDFB]">
                 {['#', 'Name', 'Posts', 'Total Impressions', 'Avg / Post', 'Followers', 'Eng. Rate', ...(hasIcp ? ['ICP Signals'] : []), 'Tier'].map(h => (
-                  <th key={h} className="px-5 py-3 text-left text-[10px] font-semibold uppercase tracking-widest text-[#A8A29E]">{h}</th>
+                  <th key={h} className="px-5 py-3 text-left text-[10px] font-semibold uppercase tracking-widest text-[#6B6B6B]">{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {rows.map((row, i) => (
-                <tr key={row.member.id} className="border-b border-[#F6F3EF] hover:bg-[#FAFAF9] transition-colors">
+                <tr key={row.member.id} className="border-b border-[#FEFDFB] hover:bg-[#FAF8F3] transition-colors">
                   <td className="px-5 py-4">
-                    {i < 3 ? <span className="text-lg">{['🥇', '🥈', '🥉'][i]}</span> : <span className="text-sm text-[#C7BFB8] font-mono">#{i + 1}</span>}
+                    {i < 3 ? <span className="text-lg">{['🥇', '🥈', '🥉'][i]}</span> : <span className="text-sm text-[#D4D4D4] font-mono">#{i + 1}</span>}
                   </td>
                   <td className="px-5 py-4">
                     <div className="flex items-center gap-3">
@@ -739,26 +735,26 @@ function LeaderboardView({ members, selectedMonth }: { members: Member[]; select
                         {row.member.name.charAt(0).toUpperCase()}
                       </div>
                       <div>
-                        <p className="font-medium text-[#1C1917]">{row.member.name}</p>
-                        {row.member.role && <p className="text-xs text-[#A8A29E]">{row.member.role}</p>}
+                        <p className="font-medium text-\[#2D2D2D\]">{row.member.name}</p>
+                        {row.member.role && <p className="text-xs text-[#6B6B6B]">{row.member.role}</p>}
                       </div>
                     </div>
                   </td>
-                  <td className="px-5 py-4 text-[#78716C]">{row.postCount}</td>
+                  <td className="px-5 py-4 text-[#4A4A4A]">{row.postCount}</td>
                   <td className="px-5 py-4">
-                    <span className="font-semibold text-[#1C1917]">{fmtN(row.impressions)}</span>
-                    <div className="mt-1.5 h-1 w-20 bg-[#F0EBE5] rounded-full overflow-hidden">
+                    <span className="font-semibold text-\[#2D2D2D\]">{fmtN(row.impressions)}</span>
+                    <div className="mt-1.5 h-1 w-20 bg-[#EEF1F5] rounded-full overflow-hidden">
                       <div className="h-full rounded-full" style={{ width: `${(row.impressions / maxImpressions) * 100}%`, backgroundColor: BRAND }} />
                     </div>
                   </td>
-                  <td className="px-5 py-4 text-[#78716C]">{row.postCount > 0 ? fmtN(row.avgPerPost) : '—'}</td>
+                  <td className="px-5 py-4 text-[#4A4A4A]">{row.postCount > 0 ? fmtN(row.avgPerPost) : '—'}</td>
                   <td className="px-5 py-4 text-green-700 font-medium">{row.followers > 0 ? `+${fmtN(row.followers)}` : '—'}</td>
-                  <td className="px-5 py-4 text-[#78716C]">{row.postCount > 0 ? fmtPct(row.avgEng) : '—'}</td>
+                  <td className="px-5 py-4 text-[#4A4A4A]">{row.postCount > 0 ? fmtPct(row.avgEng) : '—'}</td>
                   {hasIcp && (
                     <td className="px-5 py-4">
                       {row.icpTotal > 0 ? (
                         <div>
-                          <span className="font-medium text-[#1C1917]">{row.icpTotal}</span>
+                          <span className="font-medium text-\[#2D2D2D\]">{row.icpTotal}</span>
                           {row.icpMatched > 0 && <span className="text-xs text-amber-600 ml-1.5">({row.icpMatched} ICP)</span>}
                         </div>
                       ) : '—'}
@@ -776,11 +772,11 @@ function LeaderboardView({ members, selectedMonth }: { members: Member[]; select
             </tbody>
           </table>
         </div>
-        <div className="px-5 py-3 bg-[#FAFAF9] border-t border-[#F0EBE5] flex flex-wrap gap-x-5 gap-y-1">
-          <span className="text-[10px] text-[#C7BFB8]">notus benchmark (50K posts)</span>
-          <span className="text-[10px] text-[#C7BFB8]"><span style={{ color: BRAND }}>●</span> Top 10% = {fmtN(BENCHMARKS.top10PerPost)}/post</span>
-          <span className="text-[10px] text-[#C7BFB8]"><span className="text-green-500">●</span> Top 25% = {fmtN(BENCHMARKS.top25PerPost)}/post</span>
-          <span className="text-[10px] text-[#C7BFB8]"><span className="text-amber-500">●</span> Top 50% = {fmtN(BENCHMARKS.medianPerPost)}/post</span>
+        <div className="px-5 py-3 bg-[#FAF8F3] border-t border-[#EEF1F5] flex flex-wrap gap-x-5 gap-y-1">
+          <span className="text-[10px] text-[#D4D4D4]">notus benchmark (50K posts)</span>
+          <span className="text-[10px] text-[#D4D4D4]"><span style={{ color: BRAND }}>●</span> Top 10% = {fmtN(BENCHMARKS.top10PerPost)}/post</span>
+          <span className="text-[10px] text-[#D4D4D4]"><span className="text-green-500">●</span> Top 25% = {fmtN(BENCHMARKS.top25PerPost)}/post</span>
+          <span className="text-[10px] text-[#D4D4D4]"><span className="text-amber-500">●</span> Top 50% = {fmtN(BENCHMARKS.medianPerPost)}/post</span>
         </div>
       </div>
     </div>
@@ -865,24 +861,24 @@ function MemberView({ member, goals, onGoalsChange }: {
           </div>
           <div>
             <div className="flex items-center flex-wrap gap-2">
-              <h2 className="text-xl font-semibold text-[#1C1917]">{member.name}</h2>
+              <h2 className="text-xl font-semibold text-\[#2D2D2D\]">{member.name}</h2>
               {avgPerPost > 0 && (
                 <span className="text-[10px] font-semibold px-2.5 py-1 rounded-full" style={{ backgroundColor: memberTier.bg, color: memberTier.color }}>
                   {memberTier.label} Creator
                 </span>
               )}
             </div>
-            {member.role && <p className="text-sm text-[#A8A29E]">{member.role}</p>}
+            {member.role && <p className="text-sm text-[#6B6B6B]">{member.role}</p>}
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-xs text-[#A8A29E]">Viewing</span>
+          <span className="text-xs text-[#6B6B6B]">Viewing</span>
           <div className="relative">
             <select value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)}
-              className="bg-white border border-[#EDE9E4] text-[#1C1917] text-sm rounded-lg pl-3 pr-8 py-2 outline-none cursor-pointer appearance-none">
+              className="bg-white border border-[#E8ECF0] text-\[#2D2D2D\] text-sm rounded-lg pl-3 pr-8 py-2 outline-none cursor-pointer appearance-none">
               {months.map(m => <option key={m} value={m}>{monthLabel(m)}</option>)}
             </select>
-            <ChevronDown className="w-3 h-3 text-[#C7BFB8] absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <ChevronDown className="w-3 h-3 text-[#D4D4D4] absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
           </div>
         </div>
       </div>
@@ -902,13 +898,13 @@ function MemberView({ member, goals, onGoalsChange }: {
       </div>
 
       {mp.length > 0 && (
-        <div className="bg-white border border-[#EDE9E4] rounded-xl p-5">
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-[#A8A29E] mb-4">Post Impressions — {monthLabel(selectedMonth)}</p>
+        <div className="bg-white border border-[#E8ECF0] rounded-xl p-5">
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-[#6B6B6B] mb-4">Post Impressions — {monthLabel(selectedMonth)}</p>
           <ResponsiveContainer width="100%" height={160}>
             <BarChart data={chartData} barSize={20}>
               <XAxis dataKey="i" tick={{ fontSize: 10, fill: '#A8A29E' }} axisLine={false} tickLine={false} label={{ value: 'Post #', position: 'insideBottom', offset: -2, fontSize: 10, fill: '#A8A29E' }} />
               <YAxis tick={{ fontSize: 10, fill: '#A8A29E' }} axisLine={false} tickLine={false} tickFormatter={fmtN} width={36} />
-              <Tooltip formatter={(v: number) => [fmtN(v), 'Impressions']} contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid #EDE9E4' }} />
+              <Tooltip formatter={(v: number) => [fmtN(v), 'Impressions']} contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid #E8ECF0' }} />
               <ReferenceLine y={BENCHMARKS.top25PerPost} stroke="#16A34A" strokeDasharray="3 3" strokeWidth={1} />
               <ReferenceLine y={BENCHMARKS.top10PerPost} stroke={BRAND} strokeDasharray="3 3" strokeWidth={1} />
               <Bar dataKey="impressions" fill={BRAND} radius={[3, 3, 0, 0]} />
@@ -918,29 +914,29 @@ function MemberView({ member, goals, onGoalsChange }: {
       )}
 
       {followerChartData.length > 1 && (
-        <div className="bg-white border border-[#EDE9E4] rounded-xl p-5">
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-[#A8A29E] mb-4">Follower Growth — Monthly</p>
+        <div className="bg-white border border-[#E8ECF0] rounded-xl p-5">
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-[#6B6B6B] mb-4">Follower Growth — Monthly</p>
           <ResponsiveContainer width="100%" height={140}>
             <LineChart data={followerChartData}>
               <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#A8A29E' }} axisLine={false} tickLine={false} tickFormatter={k => { const [, m] = k.split('-'); return ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][parseInt(m)-1] }} />
               <YAxis tick={{ fontSize: 10, fill: '#A8A29E' }} axisLine={false} tickLine={false} tickFormatter={fmtN} width={36} />
-              <Tooltip formatter={(v: number) => [`+${fmtN(v)}`, 'New Followers']} contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid #EDE9E4' }} />
-              <CartesianGrid vertical={false} stroke="#F0EBE5" />
+              <Tooltip formatter={(v: number) => [`+${fmtN(v)}`, 'New Followers']} contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid #E8ECF0' }} />
+              <CartesianGrid vertical={false} stroke="#EEF1F5" />
               <Line type="monotone" dataKey="newFollowers" stroke={BRAND} strokeWidth={2} dot={false} />
             </LineChart>
           </ResponsiveContainer>
         </div>
       )}
 
-      <div className="bg-white border border-[#EDE9E4] rounded-xl p-5">
+      <div className="bg-white border border-[#E8ECF0] rounded-xl p-5">
         <div className="flex items-center justify-between mb-4">
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-[#A8A29E]">Monthly Goals</p>
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-[#6B6B6B]">Monthly Goals</p>
           {!editingGoals ? (
-            <button onClick={() => { setDraftGoals(goals); setEditingGoals(true) }} className="text-xs text-[#A8A29E] hover:text-[#78716C]">Edit</button>
+            <button onClick={() => { setDraftGoals(goals); setEditingGoals(true) }} className="text-xs text-[#6B6B6B] hover:text-[#4A4A4A]">Edit</button>
           ) : (
             <div className="flex gap-2">
               <button onClick={() => { onGoalsChange(draftGoals); setEditingGoals(false) }} className="text-xs font-medium text-white px-2.5 py-1 rounded-lg" style={{ backgroundColor: BRAND }}>Save</button>
-              <button onClick={() => setEditingGoals(false)} className="text-xs text-[#A8A29E]">Cancel</button>
+              <button onClick={() => setEditingGoals(false)} className="text-xs text-[#6B6B6B]">Cancel</button>
             </div>
           )}
         </div>
@@ -948,9 +944,9 @@ function MemberView({ member, goals, onGoalsChange }: {
           <div className="grid grid-cols-2 gap-3">
             {(['monthlyPosts', 'monthlyImpressions', 'monthlyFollowers', 'monthlyIcpSignals'] as const).map(k => (
               <div key={k}>
-                <label className="text-xs text-[#A8A29E] block mb-1">{k === 'monthlyPosts' ? 'Posts / month' : k === 'monthlyImpressions' ? 'Impressions / month' : k === 'monthlyFollowers' ? 'New Followers / month' : 'ICP Signals / month'}</label>
+                <label className="text-xs text-[#6B6B6B] block mb-1">{k === 'monthlyPosts' ? 'Posts / month' : k === 'monthlyImpressions' ? 'Impressions / month' : k === 'monthlyFollowers' ? 'New Followers / month' : 'ICP Signals / month'}</label>
                 <input type="number" value={draftGoals[k]} onChange={e => setDraftGoals(prev => ({ ...prev, [k]: parseInt(e.target.value) || 0 }))}
-                  className="w-full bg-[#FAFAF9] border border-[#EDE9E4] text-[#1C1917] text-sm rounded-lg px-3 py-2 outline-none" />
+                  className="w-full bg-[#FAF8F3] border border-[#E8ECF0] text-\[#2D2D2D\] text-sm rounded-lg px-3 py-2 outline-none" />
               </div>
             ))}
           </div>
@@ -965,17 +961,17 @@ function MemberView({ member, goals, onGoalsChange }: {
       </div>
 
       {topPost && (
-        <div className="bg-white border border-[#EDE9E4] rounded-xl p-5">
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-[#A8A29E] mb-3">Top Post — {monthLabel(selectedMonth)}</p>
+        <div className="bg-white border border-[#E8ECF0] rounded-xl p-5">
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-[#6B6B6B] mb-3">Top Post — {monthLabel(selectedMonth)}</p>
           <div className="flex items-start gap-3">
             <div className="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center" style={{ backgroundColor: BRAND_LIGHT }}>
               <Star className="w-4 h-4" style={{ color: BRAND }} />
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex flex-wrap gap-4 mb-2">
-                <span className="text-sm"><span className="font-semibold text-[#1C1917]">{fmtN(topPost.impressions)}</span> <span className="text-[#A8A29E] text-xs">impressions</span></span>
-                {topPost.engagements > 0 && <span className="text-sm"><span className="font-semibold text-[#1C1917]">{fmtN(topPost.engagements)}</span> <span className="text-[#A8A29E] text-xs">engagements</span></span>}
-                <span className="text-sm text-[#A8A29E] text-xs">{topPost.date}</span>
+                <span className="text-sm"><span className="font-semibold text-\[#2D2D2D\]">{fmtN(topPost.impressions)}</span> <span className="text-[#6B6B6B] text-xs">impressions</span></span>
+                {topPost.engagements > 0 && <span className="text-sm"><span className="font-semibold text-\[#2D2D2D\]">{fmtN(topPost.engagements)}</span> <span className="text-[#6B6B6B] text-xs">engagements</span></span>}
+                <span className="text-sm text-[#6B6B6B] text-xs">{topPost.date}</span>
               </div>
               {topPost.url && (
                 <a href={topPost.url} target="_blank" rel="noopener noreferrer"
@@ -989,13 +985,13 @@ function MemberView({ member, goals, onGoalsChange }: {
       )}
 
       {insights.length > 0 && (
-        <div className="bg-white border border-[#EDE9E4] rounded-xl p-5">
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-[#A8A29E] mb-3">Insights</p>
+        <div className="bg-white border border-[#E8ECF0] rounded-xl p-5">
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-[#6B6B6B] mb-3">Insights</p>
           <div className="space-y-2.5">
             {insights.map((ins, i) => (
               <div key={i} className="flex items-start gap-2.5">
                 <Zap className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" style={{ color: BRAND }} />
-                <p className="text-sm text-[#44403C] leading-relaxed">{ins}</p>
+                <p className="text-sm text-[#2D2D2D] leading-relaxed">{ins}</p>
               </div>
             ))}
           </div>
@@ -1003,17 +999,17 @@ function MemberView({ member, goals, onGoalsChange }: {
       )}
 
       {hasIcp && icpByAction.length > 0 && (
-        <div className="bg-white border border-[#EDE9E4] rounded-xl p-5">
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-[#A8A29E] mb-3">ICP Signal Breakdown — {monthLabel(selectedMonth)}</p>
+        <div className="bg-white border border-[#E8ECF0] rounded-xl p-5">
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-[#6B6B6B] mb-3">ICP Signal Breakdown — {monthLabel(selectedMonth)}</p>
           <div className="space-y-2">
             {icpByAction.map(([action, count]) => (
               <div key={action} className="flex items-center justify-between">
-                <span className="text-sm text-[#78716C] capitalize">{action}</span>
+                <span className="text-sm text-[#4A4A4A] capitalize">{action}</span>
                 <div className="flex items-center gap-2">
-                  <div className="w-24 h-1.5 bg-[#F0EBE5] rounded-full overflow-hidden">
+                  <div className="w-24 h-1.5 bg-[#EEF1F5] rounded-full overflow-hidden">
                     <div className="h-full rounded-full" style={{ width: `${(count / icpByAction[0][1]) * 100}%`, backgroundColor: BRAND }} />
                   </div>
-                  <span className="text-sm font-medium text-[#1C1917] w-6 text-right">{count}</span>
+                  <span className="text-sm font-medium text-\[#2D2D2D\] w-6 text-right">{count}</span>
                 </div>
               </div>
             ))}
@@ -1094,12 +1090,12 @@ export default function OrgPage({ params }: { params: { slug: string } }) {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#F6F3EF] flex items-center justify-center">
+      <div className="min-h-screen bg-[#FEFDFB] flex items-center justify-center">
         <div className="text-center">
           <div className="w-10 h-10 rounded-lg flex items-center justify-center mx-auto mb-4" style={{ backgroundColor: BRAND }}>
             <span className="text-white font-bold text-xl leading-none" style={{ fontFamily: 'Georgia, serif' }}>n</span>
           </div>
-          <p className="text-sm text-[#A8A29E]">Loading dashboard…</p>
+          <p className="text-sm text-[#6B6B6B]">Loading dashboard…</p>
         </div>
       </div>
     )
@@ -1107,10 +1103,10 @@ export default function OrgPage({ params }: { params: { slug: string } }) {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-[#F6F3EF] flex items-center justify-center">
+      <div className="min-h-screen bg-[#FEFDFB] flex items-center justify-center">
         <div className="text-center">
-          <p className="text-sm font-medium text-[#1C1917] mb-1">Dashboard not found</p>
-          <p className="text-xs text-[#A8A29E]">{error}</p>
+          <p className="text-sm font-medium text-\[#2D2D2D\] mb-1">Dashboard not found</p>
+          <p className="text-xs text-[#6B6B6B]">{error}</p>
         </div>
       </div>
     )
@@ -1124,11 +1120,11 @@ export default function OrgPage({ params }: { params: { slug: string } }) {
   const activeMember = members.find(m => m.id === activeTab) ?? null
 
   return (
-    <div className="flex h-screen bg-[#F6F3EF] overflow-hidden">
-      <aside className="w-44 bg-white border-r border-[#EDE9E4] flex flex-col flex-shrink-0">
-        <div className="px-4 py-4 border-b border-[#F0EBE5]">
+    <div className="flex h-screen bg-[#FEFDFB] overflow-hidden">
+      <aside className="w-44 bg-white border-r border-[#E8ECF0] flex flex-col flex-shrink-0">
+        <div className="px-4 py-4 border-b border-[#EEF1F5]">
           <NotusLogo />
-          <p className="text-xs font-semibold text-[#1C1917] mt-2 truncate">{orgName}</p>
+          <p className="text-xs font-semibold text-\[#2D2D2D\] mt-2 truncate">{orgName}</p>
         </div>
         <nav className="flex-1 overflow-y-auto px-3 py-3">
           <SectionLabel>Navigation</SectionLabel>
@@ -1141,7 +1137,7 @@ export default function OrgPage({ params }: { params: { slug: string } }) {
                   onClick={() => setActiveTab(m.id)} onDelete={() => handleDelete(m.id)}
                   icon={
                     <div className="w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-bold flex-shrink-0"
-                      style={{ backgroundColor: activeTab === m.id ? 'rgba(255,255,255,0.3)' : '#EDE9E4', color: activeTab === m.id ? 'white' : BRAND }}>
+                      style={{ backgroundColor: activeTab === m.id ? 'rgba(255,255,255,0.3)' : '#E8ECF0', color: activeTab === m.id ? 'white' : BRAND }}>
                       {m.name.charAt(0).toUpperCase()}
                     </div>
                   }
@@ -1150,32 +1146,32 @@ export default function OrgPage({ params }: { params: { slug: string } }) {
             </>
           )}
         </nav>
-        <div className="px-3 py-3 border-t border-[#F0EBE5]">
+        <div className="px-3 py-3 border-t border-[#EEF1F5]">
           <SectionLabel>Settings</SectionLabel>
           <NavItem label="Manage" active={false} onClick={() => setView('manage')} icon={<UserPlus className="w-4 h-4" />} />
         </div>
-        <div className="px-4 py-3 border-t border-[#F0EBE5]"><p className="text-[10px] text-[#C7BFB8]">by notus</p></div>
+        <div className="px-4 py-3 border-t border-[#EEF1F5]"><p className="text-[10px] text-[#D4D4D4]">by notus</p></div>
       </aside>
 
       <main className="flex-1 overflow-y-auto">
         <div className="max-w-5xl mx-auto px-6 py-6">
           {activeTab === 'leaderboard' ? (
             <div className="flex items-center justify-between mb-6">
-              <div><h1 className="text-2xl font-semibold text-[#1C1917]">Team</h1><p className="text-sm text-[#A8A29E] mt-0.5">LinkedIn performance overview</p></div>
+              <div><h1 className="text-2xl font-semibold text-\[#2D2D2D\]">Team</h1><p className="text-sm text-[#6B6B6B] mt-0.5">LinkedIn performance overview</p></div>
               {allMonthsAcross.length > 1 && (
                 <div className="relative">
                   <select value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)}
-                    className="bg-white border border-[#EDE9E4] text-[#1C1917] text-sm rounded-lg pl-3 pr-8 py-2 outline-none cursor-pointer appearance-none">
+                    className="bg-white border border-[#E8ECF0] text-\[#2D2D2D\] text-sm rounded-lg pl-3 pr-8 py-2 outline-none cursor-pointer appearance-none">
                     {allMonthsAcross.map(m => <option key={m} value={m}>{monthLabel(m)}</option>)}
                   </select>
-                  <ChevronDown className="w-3 h-3 text-[#C7BFB8] absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  <ChevronDown className="w-3 h-3 text-[#D4D4D4] absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                 </div>
               )}
             </div>
           ) : activeMember ? (
             <div className="mb-6">
-              <h1 className="text-2xl font-semibold text-[#1C1917]">{activeMember.name}</h1>
-              <p className="text-sm text-[#A8A29E] mt-0.5">{activeMember.role || 'LinkedIn Performance'}</p>
+              <h1 className="text-2xl font-semibold text-\[#2D2D2D\]">{activeMember.name}</h1>
+              <p className="text-sm text-[#6B6B6B] mt-0.5">{activeMember.role || 'LinkedIn Performance'}</p>
             </div>
           ) : null}
 
