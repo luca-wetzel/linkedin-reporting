@@ -43,8 +43,10 @@ export default function AdminPage() {
       const data = await res.json()
       setOrgs(data)
       setAuthed(true)
-    } else {
+    } else if (res.status === 401) {
       setAuthError('Wrong password')
+    } else {
+      setAuthError(`Server error (${res.status}) — check Vercel env vars`)
     }
     setLoading(false)
   }
