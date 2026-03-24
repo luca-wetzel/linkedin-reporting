@@ -291,9 +291,49 @@ function parseLinkedInCSV(text: string): { posts: Post[]; detectedColumns: strin
   return { posts, detectedColumns }
 }
 
+function stripHtml(s: string): string {
+  return s.replace(/<[^>]+>/g, '').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&nbsp;/g, ' ').trim()
+}
+
+function isGojiberryFormat(rows: Row[]): boolean {
+  if (rows.length === 0) return false
+  const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '')
+  const keys = Object.keys(rows[0]).map(norm)
+  return keys.some(k => k === 'firstname') && keys.some(k => k === 'lasttouchdate')
+}
+
+function parseGojiberryRow(row: Row): ICPSignal | null {
+  const firstName = findVal(row, ['first name', 'firstname'])
+  const lastName = findVal(row, ['last name', 'lastname'])
+  const name = [firstName, lastName].filter(Boolean).join(' ') || undefined
+
+  const rawDate = findVal(row, ['last touch date', 'lasttouchdate', 'last touch'])
+  const date = rawDate ? rawDate.split(/[\sT]/)[0] : ''
+  if (!date) return null
+
+  const rawAction = findVal(row, ['last touch', 'lasttouch', 'activity', 'action'])
+  const action = stripHtml(rawAction) || 'signal'
+
+  return {
+    date,
+    name,
+    company: findVal(row, ['company', 'organization', 'account']) || undefined,
+    title: findVal(row, ['headline', 'title', 'job title', 'position', 'role']) || undefined,
+    action,
+    source: findVal(row, ['linkedin url', 'linkedinurl', 'linkedin', 'url', 'link']) || undefined,
+    isIcp: true,
+  }
+}
+
 function parseICPSignalsCSV(text: string): ICPSignal[] {
   const { data } = Papa.parse<Row>(text, { header: true, skipEmptyLines: true, transformHeader: h => h.trim() })
-  return (data as Row[]).map(row => {
+  const rows = data as Row[]
+
+  if (isGojiberryFormat(rows)) {
+    return rows.map(parseGojiberryRow).filter((s): s is ICPSignal => s !== null)
+  }
+
+  return rows.map(row => {
     const isIcpRaw = findVal(row, ['icp', 'is_icp', 'icp_match', 'icp match', 'qualified', 'isicp']).toLowerCase()
     return {
       date: findVal(row, ['date']),
@@ -314,8 +354,13 @@ async function parseICPFile(file: File): Promise<ICPSignal[]> {
     form.append('file', file)
     const res = await fetch('/api/parse-icp', { method: 'POST', body: form })
     if (!res.ok) throw new Error('Failed to parse XLSX')
-    const { signals } = await res.json()
-    return signals
+    const json = await res.json()
+    const d = json._debug
+    if (!json.signals || json.signals.length === 0) {
+      const cols = d?.columns?.join(', ') || 'none'
+      throw new Error(`Parsed ${d?.rowCount ?? 0} rows (${d?.format ?? '?'} format). Columns found: ${cols}`)
+    }
+    return json.signals
   }
   const text = await readFileText(file)
   return parseICPSignalsCSV(text)
@@ -727,7 +772,6 @@ function ManageView({ members, orgName, onUpdate, onDelete, onAdd, onDone, orgIc
             label={orgIcpSignals.length > 0 ? 'Replace Org ICP Signals' : 'Upload Org ICP Signals'}
             onFile={(f, cb) => {
               parseICPFile(f).then(signals => {
-                if (signals.length === 0) { cb(false, 'No signals found — check the file has a Date column'); return }
                 onOrgIcpUpload(signals).then(() => cb(true)).catch(err => cb(false, (err as Error).message))
               }).catch(err => cb(false, (err as Error).message))
             }}
