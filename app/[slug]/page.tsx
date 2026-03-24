@@ -1116,12 +1116,17 @@ function LeaderboardView({ members, selectedMonth, orgIcpSignals }: { members: M
   const periodLabel = isAllTime ? 'All Time' : monthLabel(selectedMonth)
 
   const impressionsTrend = useMemo(() => {
-    // Only show data from when tracking started (earliest member addedAt)
+    // Find when tracking started, go back 6 months to capture initial LinkedIn export
     const earliest = members.reduce((min, m) => {
-      const ts = typeof m.addedAt === 'number' ? m.addedAt : new Date(m.addedAt).getTime()
-      return ts < min ? ts : min
+      const d = new Date(m.addedAt)
+      return d.getTime() < min ? d.getTime() : min
     }, Infinity)
-    const cutoff = earliest < Infinity ? monthKey(new Date(earliest)) : ''
+    let cutoff = ''
+    if (earliest < Infinity) {
+      const d = new Date(earliest)
+      d.setMonth(d.getMonth() - 6)
+      cutoff = monthKey(d)
+    }
 
     const byMonth: Record<string, number> = {}
     members.forEach(m => m.posts.forEach(p => {
@@ -1268,8 +1273,9 @@ function MemberView({ member, goals, onGoalsChange }: {
   }, [icpMonth])
 
   const followerChartData = useMemo(() => {
-    const ts = typeof member.addedAt === 'number' ? member.addedAt : new Date(member.addedAt).getTime()
-    const cutoff = ts ? monthKey(new Date(ts)) : ''
+    const d = new Date(member.addedAt)
+    d.setMonth(d.getMonth() - 6)
+    const cutoff = monthKey(d)
     const byMonth: Record<string, number> = {}
     const source = member.followerHistory.length > 0 ? member.followerHistory : []
     if (source.length > 0) {
