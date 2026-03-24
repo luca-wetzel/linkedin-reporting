@@ -1116,13 +1116,18 @@ function LeaderboardView({ members, selectedMonth, orgIcpSignals }: { members: M
   const periodLabel = isAllTime ? 'All Time' : monthLabel(selectedMonth)
 
   const impressionsTrend = useMemo(() => {
-    const byMonth: Record<string, number> = {}
+    const byMonth: Record<string, { impressions: number; posts: number }> = {}
     members.forEach(m => m.posts.forEach(p => {
       const d = parseFlexDate(p.date); if (!d) return
       const mk = monthKey(d)
-      byMonth[mk] = (byMonth[mk] || 0) + p.impressions
+      if (!byMonth[mk]) byMonth[mk] = { impressions: 0, posts: 0 }
+      byMonth[mk].impressions += p.impressions
+      byMonth[mk].posts++
     }))
-    return Object.entries(byMonth).sort(([a], [b]) => a.localeCompare(b)).filter(([, v]) => v > 0).slice(-12).map(([date, impressions]) => ({ date, impressions }))
+    const sorted = Object.entries(byMonth).sort(([a], [b]) => a.localeCompare(b))
+    // Find where regular activity starts (at least 2 posts in a month)
+    const startIdx = sorted.findIndex(([, v]) => v.posts >= 2)
+    return sorted.slice(startIdx >= 0 ? startIdx : 0).filter(([, v]) => v.impressions > 0).map(([date, v]) => ({ date, impressions: v.impressions }))
   }, [members])
 
   return (
