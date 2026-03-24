@@ -1116,26 +1116,16 @@ function LeaderboardView({ members, selectedMonth, orgIcpSignals }: { members: M
   const periodLabel = isAllTime ? 'All Time' : monthLabel(selectedMonth)
 
   const impressionsTrend = useMemo(() => {
-    // Find when tracking started, go back 6 months to capture initial LinkedIn export
-    const earliest = members.reduce((min, m) => {
-      const d = new Date(m.addedAt)
-      return d.getTime() < min ? d.getTime() : min
-    }, Infinity)
-    let cutoff = ''
-    if (earliest < Infinity) {
-      const d = new Date(earliest)
-      d.setMonth(d.getMonth() - 6)
-      cutoff = monthKey(d)
-    }
-
     const byMonth: Record<string, number> = {}
     members.forEach(m => m.posts.forEach(p => {
       const d = parseFlexDate(p.date); if (!d) return
       const mk = monthKey(d)
-      if (cutoff && mk < cutoff) return
       byMonth[mk] = (byMonth[mk] || 0) + p.impressions
     }))
-    return Object.entries(byMonth).sort(([a], [b]) => a.localeCompare(b)).filter(([, v]) => v > 0).map(([date, impressions]) => ({ date, impressions }))
+    // Find where meaningful activity starts: first month with 500+ total impressions
+    const sorted = Object.entries(byMonth).sort(([a], [b]) => a.localeCompare(b))
+    const startIdx = sorted.findIndex(([, v]) => v >= 500)
+    return sorted.slice(startIdx >= 0 ? startIdx : 0).filter(([, v]) => v > 0).map(([date, impressions]) => ({ date, impressions }))
   }, [members])
 
   return (
@@ -1273,15 +1263,12 @@ function MemberView({ member, goals, onGoalsChange }: {
   }, [icpMonth])
 
   const followerChartData = useMemo(() => {
-    const d = new Date(member.addedAt)
-    d.setMonth(d.getMonth() - 6)
-    const cutoff = monthKey(d)
     const byMonth: Record<string, number> = {}
     const source = member.followerHistory.length > 0 ? member.followerHistory : []
     if (source.length > 0) {
-      source.forEach(f => { const d = parseFlexDate(f.date); if (d) { const mk = monthKey(d); if (cutoff && mk < cutoff) return; byMonth[mk] = (byMonth[mk] || 0) + f.newFollowers } })
+      source.forEach(f => { const d = parseFlexDate(f.date); if (d) { const mk = monthKey(d); byMonth[mk] = (byMonth[mk] || 0) + f.newFollowers } })
     } else {
-      member.posts.forEach(p => { const d = parseFlexDate(p.date); if (d) { const mk = monthKey(d); if (cutoff && mk < cutoff) return; byMonth[mk] = (byMonth[mk] || 0) + p.follows } })
+      member.posts.forEach(p => { const d = parseFlexDate(p.date); if (d) { const mk = monthKey(d); byMonth[mk] = (byMonth[mk] || 0) + p.follows } })
     }
     return Object.entries(byMonth).sort(([a], [b]) => a.localeCompare(b)).filter(([, v]) => v > 0).map(([date, newFollowers]) => ({ date, newFollowers }))
   }, [member.posts, member.followerHistory])
