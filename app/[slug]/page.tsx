@@ -137,9 +137,22 @@ function icpForMonth(signals: ICPSignal[], mk: string): ICPSignal[] {
 
 type TaggedSignal = ICPSignal & { via?: string }
 
+function attributeOrgSignal(signal: ICPSignal, members: Member[]): string | undefined {
+  const action = (signal.action ?? '').toLowerCase()
+  for (const m of members) {
+    const full = m.name.toLowerCase()
+    if (full && action.includes(full)) return m.name
+    const first = m.name.split(' ')[0]?.toLowerCase()
+    const last = m.name.split(' ').slice(1).join(' ').toLowerCase()
+    if (last && action.includes(last)) return m.name
+    if (first && first.length > 3 && action.includes(first)) return m.name
+  }
+  return undefined
+}
+
 function allSignals(members: Member[], orgIcpSignals: ICPSignal[]): TaggedSignal[] {
   return [
-    ...orgIcpSignals.map(s => ({ ...s, via: undefined as string | undefined })),
+    ...orgIcpSignals.map(s => ({ ...s, via: attributeOrgSignal(s, members) })),
     ...members.flatMap(m => m.icpSignals.map(s => ({ ...s, via: m.name }))),
   ]
 }
@@ -1070,25 +1083,29 @@ function ICPPipelineView({ members, orgIcpSignals }: { members: Member[]; orgIcp
 // ─── Leaderboard ──────────────────────────────────────────────────────────────
 
 function LeaderboardView({ members, selectedMonth, orgIcpSignals }: { members: Member[]; selectedMonth: string; orgIcpSignals?: ICPSignal[] }) {
+  const orgIcpMonth = useMemo(() => orgIcpSignals ? icpForMonth(orgIcpSignals, selectedMonth) : [], [orgIcpSignals, selectedMonth])
+
   const rows = useMemo(() => {
     return members.map(m => {
       const mp = postsForMonth(m.posts, selectedMonth)
       const mf = followerGrowthForMonth(m.posts, m.followerHistory, selectedMonth)
-      const icp = icpForMonth(m.icpSignals, selectedMonth)
+      const memberIcp = icpForMonth(m.icpSignals, selectedMonth)
+      // Also count org ICP signals attributed to this member
+      const attributedOrg = orgIcpMonth.filter(s => attributeOrgSignal(s, [m]) === m.name)
+      const icpTotal = memberIcp.length + attributedOrg.length
       const impressions = mp.reduce((s, p) => s + p.impressions, 0)
       const avgPerPost = mp.length > 0 ? impressions / mp.length : 0
       const avgEng = mp.length > 0 ? mp.reduce((s, p) => s + p.engagementRate, 0) / mp.length : 0
       const t = tier(avgPerPost)
-      const icpMatched = icp.filter(s => s.isIcp).length
-      return { member: m, postCount: mp.length, impressions, avgPerPost, avgEng, followers: mf, tier: t, icpTotal: icp.length, icpMatched }
+      return { member: m, postCount: mp.length, impressions, avgPerPost, avgEng, followers: mf, tier: t, icpTotal }
     }).sort((a, b) => b.impressions - a.impressions)
-  }, [members, selectedMonth])
+  }, [members, selectedMonth, orgIcpMonth])
 
   const totalImpressions = rows.reduce((s, r) => s + r.impressions, 0)
   const totalPosts = rows.reduce((s, r) => s + r.postCount, 0)
   const totalFollowers = rows.reduce((s, r) => s + r.followers, 0)
-  const orgIcpMonth = orgIcpSignals ? icpForMonth(orgIcpSignals, selectedMonth) : []
-  const totalIcp = rows.reduce((s, r) => s + r.icpTotal, 0) + orgIcpMonth.length
+  const unattributedIcp = orgIcpMonth.filter(s => !attributeOrgSignal(s, members)).length
+  const totalIcp = rows.reduce((s, r) => s + r.icpTotal, 0) + unattributedIcp
   const maxImpressions = Math.max(...rows.map(r => r.impressions), 1)
   const hasIcp = rows.some(r => r.icpTotal > 0) || orgIcpMonth.length > 0
 
@@ -1098,7 +1115,7 @@ function LeaderboardView({ members, selectedMonth, orgIcpSignals }: { members: M
         <StatCard label="Team Impressions" value={fmtN(totalImpressions)} sub={`${members.length} members · ${monthLabel(selectedMonth)}`} />
         <StatCard label="Posts Published" value={totalPosts.toString()} sub={`${fmtN(totalImpressions / Math.max(totalPosts, 1))} avg impressions / post`} />
         <StatCard label="Follower Growth" value={`+${fmtN(totalFollowers)}`} sub={monthLabel(selectedMonth)} />
-        {hasIcp && <StatCard label="ICP Signals" value={fmtN(totalIcp)} sub={orgIcpMonth.length > 0 && rows.every(r => r.icpTotal === 0) ? `${orgIcpMonth.length} unattributed` : orgIcpMonth.length > 0 ? `incl. ${orgIcpMonth.length} unattributed` : 'Total LinkedIn signals this month'} />}
+        {hasIcp && <StatCard label="ICP Signals" value={fmtN(totalIcp)} sub={unattributedIcp > 0 ? `incl. ${unattributedIcp} unattributed` : 'Total LinkedIn signals this month'} />}
       </div>
       <div className="bg-white border border-[#E8ECF0] rounded-xl overflow-hidden">
         <div className="px-6 py-4 border-b border-[#EEF1F5]">
@@ -1144,10 +1161,7 @@ function LeaderboardView({ members, selectedMonth, orgIcpSignals }: { members: M
                   {hasIcp && (
                     <td className="px-5 py-4">
                       {row.icpTotal > 0 ? (
-                        <div>
-                          <span className="font-medium text-[#2D2D2D]">{row.icpTotal}</span>
-                          {row.icpMatched > 0 && <span className="text-xs text-amber-600 ml-1.5">({row.icpMatched} ICP)</span>}
-                        </div>
+                        <span className="font-medium text-[#2D2D2D]">{row.icpTotal}</span>
                       ) : '—'}
                     </td>
                   )}
