@@ -298,6 +298,20 @@ function parseICPSignalsCSV(text: string): ICPSignal[] {
   }).filter(s => s.date)
 }
 
+async function parseICPFile(file: File): Promise<ICPSignal[]> {
+  const isXlsx = /\.(xlsx|xls|xlsm)$/i.test(file.name) || file.type.includes('spreadsheet') || file.type.includes('excel')
+  if (isXlsx) {
+    const form = new FormData()
+    form.append('file', file)
+    const res = await fetch('/api/parse-icp', { method: 'POST', body: form })
+    if (!res.ok) throw new Error('Failed to parse XLSX')
+    const { signals } = await res.json()
+    return signals
+  }
+  const text = await readFileText(file)
+  return parseICPSignalsCSV(text)
+}
+
 // ─── Design Components ────────────────────────────────────────────────────────
 
 function NotusLogo() {
@@ -478,10 +492,9 @@ function ManageView({ members, orgName, onUpdate, onDelete, onAdd, onDone, orgIc
         onResult(true)
       }).catch(err => onResult(false, (err as Error).message))
     } else {
-      readFileText(file).then(text => {
+      parseICPFile(file).then(incoming => {
         const member = members.find(m => m.id === memberId)
         if (!member) { onResult(false, 'Member not found'); return }
-        const incoming = parseICPSignalsCSV(text)
         onUpdate(memberId, { icpSignals: smartMergeICP(member.icpSignals, incoming) })
         onResult(true)
       }).catch(err => onResult(false, (err as Error).message))
@@ -500,8 +513,7 @@ function ManageView({ members, orgName, onUpdate, onDelete, onAdd, onDone, orgIc
         setNewPosts(posts); setNewPostsLoaded(true); setAddError(''); setNewFollowerHistory(followerHistory)
       }).catch(err => setAddError((err as Error).message))
     } else {
-      readFileText(file).then(text => {
-        const signals = parseICPSignalsCSV(text)
+      parseICPFile(file).then(signals => {
         setNewIcpSignals(signals); setNewIcpLoaded(true)
       }).catch(err => setAddError((err as Error).message))
     }
@@ -690,10 +702,9 @@ function ManageView({ members, orgName, onUpdate, onDelete, onAdd, onDone, orgIc
           <MiniDropZone
             label={orgIcpSignals.length > 0 ? 'Replace Org ICP Signals' : 'Upload Org ICP Signals'}
             onFile={(f, cb) => {
-              readFileText(f).then(text => {
-                const signals = parseICPSignalsCSV(text)
+              parseICPFile(f).then(signals =>
                 onOrgIcpUpload(signals).then(() => cb(true)).catch(err => cb(false, (err as Error).message))
-              }).catch(err => cb(false, (err as Error).message))
+              ).catch(err => cb(false, (err as Error).message))
             }}
           />
         </div>
