@@ -406,10 +406,11 @@ function NavItem({ label, active, onClick, icon, onDelete }: {
 function StatCard({ label, value, sub, trend }: {
   label: string; value: string; sub?: string; trend?: { text: string; positive: boolean } | null
 }) {
+  const textSize = value.length > 12 ? 'text-lg' : value.length > 8 ? 'text-xl' : 'text-3xl'
   return (
-    <div className="bg-white rounded-xl border border-[#E8ECF0] p-5" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04)' }}>
+    <div className="bg-white rounded-xl border border-[#E8ECF0] p-4 md:p-5" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04)' }}>
       <p className="text-[10px] font-semibold uppercase tracking-widest text-[#6B6B6B] mb-3">{label}</p>
-      <p className="text-3xl font-bold text-[#2D2D2D] mb-1.5 leading-none">{value}</p>
+      <p className={`${textSize} font-bold text-[#2D2D2D] mb-1.5 leading-tight truncate`}>{value}</p>
       {trend && <p className={`text-xs font-medium mb-1 ${trend.positive ? 'text-green-600' : 'text-red-500'}`}>{trend.positive ? '↑' : '↓'} {trend.text}</p>}
       {sub && <p className="text-[11px] text-[#6B6B6B] leading-snug">{sub}</p>}
     </div>
@@ -874,7 +875,7 @@ function ICPOverview({ members, orgIcpSignals }: { members: Member[]; orgIcpSign
       <p className="text-[10px] font-semibold uppercase tracking-widest text-[#6B6B6B]">ICP Overview — All Time</p>
       <div className="grid grid-cols-2 gap-4">
         <StatCard label="Total ICP Signals" value={fmtN(total)} sub="All sources combined" />
-        <StatCard label="Top Company" value={topCompany ? (topCompany.length > 14 ? topCompany.slice(0, 14) + '…' : topCompany) : '—'} sub={topCompany ? `${companyCounts[0][1]} signals` : 'No company data'} />
+        <StatCard label="Top Company" value={topCompany ?? '—'} sub={topCompany ? `${companyCounts[0][1]} signals` : 'No company data'} />
       </div>
 
       {trendData.length > 1 && (
@@ -1291,16 +1292,41 @@ function MemberView({ member, goals, onGoalsChange }: {
       {mp.length > 0 && (
         <div className="bg-white border border-[#E8ECF0] rounded-xl p-5">
           <p className="text-[10px] font-semibold uppercase tracking-widest text-[#6B6B6B] mb-4">Post Impressions — {monthLabel(selectedMonth)}</p>
-          <ResponsiveContainer width="100%" height={160}>
-            <BarChart data={chartData} barSize={20}>
-              <XAxis dataKey="i" tick={{ fontSize: 10, fill: '#A8A29E' }} axisLine={false} tickLine={false} label={{ value: 'Post #', position: 'insideBottom', offset: -2, fontSize: 10, fill: '#A8A29E' }} />
-              <YAxis tick={{ fontSize: 10, fill: '#A8A29E' }} axisLine={false} tickLine={false} tickFormatter={fmtN} width={36} />
-              <Tooltip formatter={(v: number) => [fmtN(v), 'Impressions']} contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid #E8ECF0' }} />
-              <ReferenceLine y={BENCHMARKS.top25PerPost} stroke="#16A34A" strokeDasharray="3 3" strokeWidth={1} />
-              <ReferenceLine y={BENCHMARKS.top10PerPost} stroke={BRAND} strokeDasharray="3 3" strokeWidth={1} />
-              <Bar dataKey="impressions" fill={BRAND} radius={[3, 3, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
+          {mp.length <= 4 ? (
+            <div className="space-y-3">
+              {chartData.map(p => {
+                const max = Math.max(...chartData.map(d => d.impressions), 1)
+                return (
+                  <div key={p.i}>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs text-[#4A4A4A]">Post {p.i}</span>
+                      <span className="text-xs font-semibold text-[#2D2D2D]">{fmtN(p.impressions)} impressions</span>
+                    </div>
+                    <div className="h-2.5 bg-[#EEF1F5] rounded-full overflow-hidden relative">
+                      <div className="h-full rounded-full" style={{ width: `${(p.impressions / max) * 100}%`, backgroundColor: BRAND }} />
+                      {BENCHMARKS.top25PerPost <= max && (
+                        <div className="absolute top-0 bottom-0 w-px bg-green-500 opacity-50" style={{ left: `${(BENCHMARKS.top25PerPost / max) * 100}%` }} />
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
+              <div className="flex items-center gap-4 pt-1">
+                <span className="flex items-center gap-1.5 text-[10px] text-[#A8A29E]"><span className="w-2 h-px bg-green-500 inline-block" /> Top 25%: {fmtN(BENCHMARKS.top25PerPost)}</span>
+              </div>
+            </div>
+          ) : (
+            <ResponsiveContainer width="100%" height={160}>
+              <BarChart data={chartData} barSize={Math.min(32, Math.max(12, 300 / chartData.length))}>
+                <XAxis dataKey="i" tick={{ fontSize: 10, fill: '#A8A29E' }} axisLine={false} tickLine={false} label={{ value: 'Post #', position: 'insideBottom', offset: -2, fontSize: 10, fill: '#A8A29E' }} />
+                <YAxis tick={{ fontSize: 10, fill: '#A8A29E' }} axisLine={false} tickLine={false} tickFormatter={fmtN} width={36} />
+                <Tooltip formatter={(v: number) => [fmtN(v), 'Impressions']} contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid #E8ECF0' }} />
+                <ReferenceLine y={BENCHMARKS.top25PerPost} stroke="#16A34A" strokeDasharray="3 3" strokeWidth={1} />
+                <ReferenceLine y={BENCHMARKS.top10PerPost} stroke={BRAND} strokeDasharray="3 3" strokeWidth={1} />
+                <Bar dataKey="impressions" fill={BRAND} radius={[3, 3, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          )}
         </div>
       )}
 
