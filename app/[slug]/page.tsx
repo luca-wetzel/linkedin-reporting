@@ -601,21 +601,20 @@ function ManageView({ members, orgName, onUpdate, onDelete, onAdd, onDone, orgIc
 
   function detectMismatch(existing: Post[], incoming: Post[], memberName: string): string | undefined {
     // Primary: compare LinkedIn usernames from post URLs
-    const existingSlugs = new Set(existing.map(p => p.url ? extractLinkedInSlug(p.url) : null).filter(Boolean))
-    const incomingSlugs = new Set(incoming.map(p => p.url ? extractLinkedInSlug(p.url) : null).filter(Boolean))
+    const existingSlugs = Array.from(new Set(existing.map(p => p.url ? extractLinkedInSlug(p.url) : null).filter(Boolean)))
+    const incomingSlugs = Array.from(new Set(incoming.map(p => p.url ? extractLinkedInSlug(p.url) : null).filter(Boolean)))
 
-    if (existingSlugs.size > 0 && incomingSlugs.size > 0) {
-      const overlap = [...incomingSlugs].some(s => existingSlugs.has(s))
+    if (existingSlugs.length > 0 && incomingSlugs.length > 0) {
+      const existingSet = new Set(existingSlugs)
+      const overlap = incomingSlugs.some(s => existingSet.has(s))
       if (!overlap) {
-        const existingName = [...existingSlugs][0]
-        const incomingName = [...incomingSlugs][0]
-        return `This file appears to be for "${incomingName}" but ${memberName}'s existing data is from "${existingName}". Are you sure this is the right file?`
+        return `This file appears to be for "${incomingSlugs[0]}" but ${memberName}'s existing data is from "${existingSlugs[0]}". Are you sure this is the right file?`
       }
     }
 
     // Fallback: check if incoming slugs match member name at all
-    if (incomingSlugs.size > 0 && existing.length === 0) {
-      const slug = [...incomingSlugs][0] ?? ''
+    if (incomingSlugs.length > 0 && existing.length === 0) {
+      const slug = incomingSlugs[0] ?? ''
       const nameParts = memberName.toLowerCase().split(/\s+/)
       const nameInSlug = nameParts.some(part => part.length > 2 && slug.includes(part))
       if (!nameInSlug) {
