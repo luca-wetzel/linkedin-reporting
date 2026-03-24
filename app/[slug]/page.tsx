@@ -1642,9 +1642,14 @@ export default function OrgPage({ params }: { params: { slug: string } }) {
   }, [slug, apiKey, authFetch])
 
   const allMonthsAcross = useMemo(() => {
-    const keys = new Set<string>()
-    members.forEach(m => uniqueMonths(m.posts).forEach(k => keys.add(k)))
-    return Array.from(keys).sort().reverse()
+    const byMonth: Record<string, number> = {}
+    members.forEach(m => m.posts.forEach(p => {
+      const d = parseFlexDate(p.date); if (!d) return
+      const mk = monthKey(d)
+      byMonth[mk] = (byMonth[mk] || 0) + p.impressions
+    }))
+    // Only show months with meaningful activity (500+ total impressions)
+    return Object.entries(byMonth).filter(([, v]) => v >= 500).map(([k]) => k).sort().reverse()
   }, [members])
 
   const [selectedMonth, setSelectedMonth] = useState<string>('all')
