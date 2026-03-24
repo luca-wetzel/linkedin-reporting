@@ -1153,7 +1153,7 @@ function LeaderboardView({ members, selectedMonth, orgIcpSignals }: { members: M
                   )}
                   <td className="px-5 py-4">
                     {row.postCount > 0 && (
-                      <span className="text-[10px] font-semibold px-2.5 py-1 rounded-full" style={{ backgroundColor: row.tier.bg, color: row.tier.color }}>
+                      <span className="text-[10px] font-semibold px-2.5 py-1 rounded-full whitespace-nowrap" style={{ backgroundColor: row.tier.bg, color: row.tier.color }}>
                         {row.tier.label}
                       </span>
                     )}
