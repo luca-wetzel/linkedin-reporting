@@ -594,15 +594,35 @@ function ManageView({ members, orgName, onUpdate, onDelete, onAdd, onDone, orgIc
     }
   }
 
-  function detectMismatch(existing: Post[], incoming: Post[]): string | undefined {
-    if (existing.length === 0 || incoming.length === 0) return undefined
-    const existingMonths = new Set(existing.map(p => p.date?.slice(0, 7)).filter(Boolean))
-    const incomingMonths = new Set(incoming.map(p => p.date?.slice(0, 7)).filter(Boolean))
-    const overlap = [...incomingMonths].some(m => existingMonths.has(m))
-    if (!overlap) {
-      const eRange = [...existingMonths].sort(); const iRange = [...incomingMonths].sort()
-      return `This file covers ${iRange[0]} to ${iRange[iRange.length - 1]}, but this member's existing data is from ${eRange[0]} to ${eRange[eRange.length - 1]}. Are you uploading the right person's file?`
+  function extractLinkedInSlug(url: string): string | null {
+    const match = url.match(/linkedin\.com\/(?:posts|pulse|feed\/update)\/([a-zA-Z0-9_-]+?)(?:_|-\d)/)
+    return match?.[1]?.toLowerCase() ?? null
+  }
+
+  function detectMismatch(existing: Post[], incoming: Post[], memberName: string): string | undefined {
+    // Primary: compare LinkedIn usernames from post URLs
+    const existingSlugs = new Set(existing.map(p => p.url ? extractLinkedInSlug(p.url) : null).filter(Boolean))
+    const incomingSlugs = new Set(incoming.map(p => p.url ? extractLinkedInSlug(p.url) : null).filter(Boolean))
+
+    if (existingSlugs.size > 0 && incomingSlugs.size > 0) {
+      const overlap = [...incomingSlugs].some(s => existingSlugs.has(s))
+      if (!overlap) {
+        const existingName = [...existingSlugs][0]
+        const incomingName = [...incomingSlugs][0]
+        return `This file appears to be for "${incomingName}" but ${memberName}'s existing data is from "${existingName}". Are you sure this is the right file?`
+      }
     }
+
+    // Fallback: check if incoming slugs match member name at all
+    if (incomingSlugs.size > 0 && existing.length === 0) {
+      const slug = [...incomingSlugs][0] ?? ''
+      const nameParts = memberName.toLowerCase().split(/\s+/)
+      const nameInSlug = nameParts.some(part => part.length > 2 && slug.includes(part))
+      if (!nameInSlug) {
+        return `This file appears to be for "${slug}" — does that match ${memberName}?`
+      }
+    }
+
     return undefined
   }
 
@@ -617,7 +637,7 @@ function ManageView({ members, orgName, onUpdate, onDelete, onAdd, onDone, orgIc
         const merged = smartMergePosts(member.posts, incoming)
         const mergedFollowers = smartMergeFollowers(member.followerHistory, incomingFollowers)
         const summary = computeSummary(incoming, incomingFollowers, [])
-        const warning = detectMismatch(member.posts, incoming)
+        const warning = detectMismatch(member.posts, incoming, member.name)
         setPendingUpload({ memberId, memberName: member.name, type, data: { posts: merged, followerHistory: mergedFollowers }, summary, warning, onResult })
       }).catch(err => onResult(false, (err as Error).message))
     } else {
