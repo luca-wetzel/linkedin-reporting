@@ -393,6 +393,7 @@ function MiniDropZone({ label, onFile }: {
 }) {
   const ref = useRef<HTMLInputElement>(null)
   const [status, setStatus] = useState<'idle' | 'ok' | 'err'>('idle')
+  const [dragging, setDragging] = useState(false)
   const [errMsg, setErrMsg] = useState('')
   const handle = useCallback((f: File) => {
     const ok = /\.(csv|xlsx|xls|xlsm)$/i.test(f.name)
@@ -406,15 +407,20 @@ function MiniDropZone({ label, onFile }: {
     ? { borderColor: '#16A34A', backgroundColor: '#F0FDF4', color: '#16A34A' }
     : status === 'err'
     ? { borderColor: '#DC2626', backgroundColor: '#FEF2F2', color: '#DC2626' }
+    : dragging
+    ? { borderColor: '#722F37', backgroundColor: '#F4ECED', color: '#722F37' }
     : { borderColor: '#E8ECF0', backgroundColor: 'white', color: '#78716C' }
   return (
     <div className="flex flex-col gap-1">
       <input ref={ref} type="file" accept=".csv,.xlsx,.xls,.xlsm" style={{ display: 'none' }}
         onChange={e => { const f = e.target.files?.[0]; if (f) handle(f); e.target.value = '' }} />
       <button onClick={() => ref.current?.click()}
+        onDragOver={e => { e.preventDefault(); setDragging(true) }}
+        onDragLeave={() => setDragging(false)}
+        onDrop={e => { e.preventDefault(); setDragging(false); const f = e.dataTransfer.files?.[0]; if (f) handle(f) }}
         className="flex items-center gap-2 px-3 py-2 rounded-lg border text-xs font-medium transition-all" style={style}>
-        {status === 'ok' ? <Check className="w-3.5 h-3.5" /> : <RefreshCw className="w-3.5 h-3.5" style={{ color: status === 'err' ? '#DC2626' : '#C7BFB8' }} />}
-        {status === 'ok' ? 'Updated!' : status === 'err' ? 'Failed' : label}
+        {status === 'ok' ? <Check className="w-3.5 h-3.5" /> : <RefreshCw className="w-3.5 h-3.5" style={{ color: status === 'err' ? '#DC2626' : dragging ? '#722F37' : '#C7BFB8' }} />}
+        {status === 'ok' ? 'Updated!' : status === 'err' ? 'Failed' : dragging ? 'Drop to upload' : label}
       </button>
       {status === 'err' && <p className="text-[10px] text-red-500 leading-tight max-w-[180px]">{errMsg}</p>}
     </div>
@@ -426,15 +432,22 @@ function UploadCard({ type, label, hint, loaded, onFile }: {
   onFile: (f: File, type: 'posts' | 'icp') => void
 }) {
   const ref = useRef<HTMLInputElement>(null)
+  const [dragging, setDragging] = useState(false)
   return (
     <div onClick={() => ref.current?.click()}
+      onDragOver={e => { e.preventDefault(); setDragging(true) }}
+      onDragLeave={() => setDragging(false)}
+      onDrop={e => { e.preventDefault(); setDragging(false); const f = e.dataTransfer.files?.[0]; if (f) onFile(f, type) }}
       className="border-2 border-dashed rounded-xl p-5 cursor-pointer transition-all text-center"
-      style={loaded ? { borderColor: '#16A34A', backgroundColor: '#F0FDF4' } : { borderColor: '#E7E0D8', backgroundColor: '#FAF8F3' }}>
+      style={loaded ? { borderColor: '#16A34A', backgroundColor: '#F0FDF4' } : dragging ? { borderColor: '#722F37', backgroundColor: '#F4ECED' } : { borderColor: '#E7E0D8', backgroundColor: '#FAF8F3' }}>
       <input ref={ref} type="file" accept=".csv,.xlsx,.xls,.xlsm" style={{ display: 'none' }}
         onChange={e => { const f = e.target.files?.[0]; if (f) onFile(f, type); e.target.value = '' }} />
       {loaded ? (
         <><div className="w-7 h-7 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-1.5"><span className="text-green-600 font-bold text-sm">✓</span></div>
           <p className="text-sm font-medium text-green-700">{label} loaded</p></>
+      ) : dragging ? (
+        <><Upload className="w-5 h-5 mx-auto mb-1.5" style={{ color: '#722F37' }} />
+          <p className="text-sm font-medium" style={{ color: '#722F37' }}>Drop to upload</p></>
       ) : (
         <><Upload className="w-5 h-5 text-[#D4D4D4] mx-auto mb-1.5" />
           <p className="text-sm font-medium text-[#4A4A4A]">{label}</p>
