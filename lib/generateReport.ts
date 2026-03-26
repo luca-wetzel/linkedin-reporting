@@ -578,7 +578,7 @@ function buildMemberPage(
     return { month: mk, posts: mPosts.length, imp: mImpTotal, fol: mFol, avg: mAvg, icp: mIcpOwn + mIcpAttr }
   })
 
-  const showIcpCol = monthData.some(d => d.icp > 0)
+  const showIcpCol = icpTotal > 0
   const monthHead = ['Month', 'Posts', 'Impressions', 'Avg/Post', 'Followers']
   if (showIcpCol) monthHead.push('ICP')
 
@@ -619,9 +619,15 @@ function buildMemberPage(
       { label: 'Impressions', current: postsForMonth(member.posts, latestMonth).reduce((s, p) => s + p.impressions, 0), goal: goals.monthlyImpressions },
       { label: 'Followers', current: followerGrowthForMonth(member.posts, member.followerHistory, latestMonth), goal: goals.monthlyFollowers },
       { label: 'ICP Signals', current: (() => {
+        // Try latest month first (own + attributed org signals)
         const own = icpForMonth(member.icpSignals, latestMonth).length
         const attr = icpForMonth(orgIcpSignals, latestMonth).filter(s => attributeOrgSignal(s, [member]) === member.name).length
-        return own + attr
+        const monthCount = own + attr
+        // If month count is 0 but member has total ICP, show monthly average
+        if (monthCount === 0 && icpTotal > 0 && months.length > 0) {
+          return Math.round(icpTotal / Math.min(months.length, 3)) // avg over recent months
+        }
+        return monthCount
       })(), goal: goals.monthlyIcpSignals },
     ]
 
