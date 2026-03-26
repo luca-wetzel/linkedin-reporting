@@ -353,20 +353,21 @@ async function buildPage1(
     const maxRows = Math.floor(available / rowH)
     const shown = trendReversed.slice(0, Math.min(trendReversed.length, maxRows))
 
+    const barStartX = 46 // fixed start for all bars
     for (const pt of shown) {
       const bw = maxVal > 0 ? (pt.imp / maxVal) * barMax : 0
       doc.setFont('helvetica', 'normal')
       doc.setFontSize(8)
       doc.setTextColor(...MID)
-      doc.text(monthLabel(pt.date), 14, y + 4.5)
+      doc.text(monthLabel(pt.date), barStartX - 4, y + 4.5, { align: 'right' })
       if (bw > 0.5) {
         doc.setFillColor(...BRAND)
-        doc.roundedRect(48, y, bw, barH, 1.5, 1.5, 'F')
+        doc.roundedRect(barStartX, y, bw, barH, 1.5, 1.5, 'F')
       }
       doc.setFont('helvetica', 'bold')
       doc.setFontSize(8.5)
       doc.setTextColor(...DARK)
-      doc.text(fmtN(pt.imp), 48 + bw + 3, y + 4.5)
+      doc.text(fmtN(pt.imp), barStartX + bw + 3, y + 4.5)
       y += rowH
     }
   }
@@ -601,7 +602,7 @@ function buildMemberPage(
       { label: 'Posts', current: postsForMonth(member.posts, latestMonth).length, goal: goals.monthlyPosts },
       { label: 'Impressions', current: postsForMonth(member.posts, latestMonth).reduce((s, p) => s + p.impressions, 0), goal: goals.monthlyImpressions },
       { label: 'Followers', current: followerGrowthForMonth(member.posts, member.followerHistory, latestMonth), goal: goals.monthlyFollowers },
-      { label: 'ICP Signals', current: icpForMonth(member.icpSignals, latestMonth).length, goal: goals.monthlyIcpSignals },
+      { label: 'ICP Signals', current: icpForMonth(member.icpSignals, latestMonth).length + icpForMonth(orgIcpSignals, latestMonth).filter(s => attributeOrgSignal(s, [member]) === member.name).length, goal: goals.monthlyIcpSignals },
     ]
 
     for (const g of goalItems) {
