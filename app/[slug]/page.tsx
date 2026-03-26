@@ -1795,6 +1795,7 @@ export default function OrgPage({ params }: { params: { slug: string } }) {
   const [saveError, setSaveError] = useState('')
   const [orgIcpSignals, setOrgIcpSignals] = useState<ICPSignal[]>([])
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [exporting, setExporting] = useState(false)
 
   // ─── Undo system ───────────────────────────────────────────────────────────
   const undoRef = useRef<{
@@ -1983,6 +1984,18 @@ export default function OrgPage({ params }: { params: { slug: string } }) {
     setGoals(prev => ({ ...prev, [id]: { ...DEFAULT_GOALS } }))
   }
 
+  async function handleExportReport() {
+    setExporting(true)
+    try {
+      const { generateReport } = await import('@/lib/generateReport')
+      await generateReport({ orgName, selectedMonth, members, orgIcpSignals, goals })
+    } catch (e) {
+      setSaveError((e as Error).message || 'Failed to generate report')
+    } finally {
+      setExporting(false)
+    }
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-[#FEFDFB] flex items-center justify-center">
@@ -2036,15 +2049,23 @@ export default function OrgPage({ params }: { params: { slug: string } }) {
           <button onClick={() => setSidebarOpen(true)} className="p-1 -ml-1"><Menu className="w-5 h-5 text-[#4A4A4A]" /></button>
           <p className="text-sm font-semibold text-[#2D2D2D] truncate">{orgName}</p>
         </div>
-        {activeTab === 'leaderboard' && allMonthsAcross.length > 0 && (
-          <div className="relative">
-            <select value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)}
-              className="bg-white border border-[#E8ECF0] text-[#2D2D2D] text-xs rounded-lg pl-2 pr-6 py-1.5 outline-none cursor-pointer appearance-none">
-              {<option value="all">All Time</option>}{allMonthsAcross.map(m => <option key={m} value={m}>{monthLabel(m)}</option>)}
-            </select>
-            <ChevronDown className="w-3 h-3 text-[#D4D4D4] absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
-          </div>
-        )}
+        <div className="flex items-center gap-2">
+          {activeTab === 'leaderboard' && members.length > 0 && (
+            <button onClick={handleExportReport} disabled={exporting}
+              className="p-1.5 bg-white border border-[#E8ECF0] rounded-lg text-[#4A4A4A] disabled:opacity-50">
+              <FileText className="w-4 h-4" />
+            </button>
+          )}
+          {activeTab === 'leaderboard' && allMonthsAcross.length > 0 && (
+            <div className="relative">
+              <select value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)}
+                className="bg-white border border-[#E8ECF0] text-[#2D2D2D] text-xs rounded-lg pl-2 pr-6 py-1.5 outline-none cursor-pointer appearance-none">
+                {<option value="all">All Time</option>}{allMonthsAcross.map(m => <option key={m} value={m}>{monthLabel(m)}</option>)}
+              </select>
+              <ChevronDown className="w-3 h-3 text-[#D4D4D4] absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Sidebar overlay backdrop (mobile) */}
@@ -2092,15 +2113,24 @@ export default function OrgPage({ params }: { params: { slug: string } }) {
           {activeTab === 'leaderboard' ? (
             <div className="flex items-center justify-between mb-4 md:mb-6">
               <div><h1 className="text-xl md:text-2xl font-semibold text-[#2D2D2D]">Team</h1><p className="text-base text-[#6B6B6B] mt-0.5">LinkedIn performance overview</p></div>
-              {allMonthsAcross.length > 0 && (
-                <div className="relative hidden md:block">
-                  <select value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)}
-                    className="bg-white border border-[#E8ECF0] text-[#2D2D2D] text-sm rounded-lg pl-3 pr-8 py-2 outline-none cursor-pointer appearance-none">
-                    {<option value="all">All Time</option>}{allMonthsAcross.map(m => <option key={m} value={m}>{monthLabel(m)}</option>)}
-                  </select>
-                  <ChevronDown className="w-3 h-3 text-[#D4D4D4] absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                </div>
-              )}
+              <div className="flex items-center gap-2">
+                {members.length > 0 && (
+                  <button onClick={handleExportReport} disabled={exporting}
+                    className="flex items-center gap-1.5 bg-white border border-[#E8ECF0] text-[#4A4A4A] text-sm rounded-lg px-3 py-2 hover:bg-[#FAF8F3] transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                    <FileText className="w-3.5 h-3.5" />
+                    <span className="hidden md:inline">{exporting ? 'Generating…' : 'Export Report'}</span>
+                  </button>
+                )}
+                {allMonthsAcross.length > 0 && (
+                  <div className="relative hidden md:block">
+                    <select value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)}
+                      className="bg-white border border-[#E8ECF0] text-[#2D2D2D] text-sm rounded-lg pl-3 pr-8 py-2 outline-none cursor-pointer appearance-none">
+                      {<option value="all">All Time</option>}{allMonthsAcross.map(m => <option key={m} value={m}>{monthLabel(m)}</option>)}
+                    </select>
+                    <ChevronDown className="w-3 h-3 text-[#D4D4D4] absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  </div>
+                )}
+              </div>
             </div>
           ) : activeTab === 'icp' ? (
             <div className="mb-4 md:mb-6">
