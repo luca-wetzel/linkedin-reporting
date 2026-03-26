@@ -1972,8 +1972,10 @@ function MemberView({ member, goals, onGoalsChange }: {
         const metrics: string[] = []
         if (firstDate && lastDate) metrics.push(`${mp.length} posts published between ${firstDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric' })} and ${lastDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}`)
         metrics.push(`Total reach: ${fmtN(totalImpressions)} impressions at a median of ${fmtN(medianImp)} per post${medianImp >= BENCHMARKS.top25PerPost ? ' — above the top 25% benchmark' : medianImp >= BENCHMARKS.medianPerPost ? ' — above median' : ''}`)
-        if (avgEng > 0) metrics.push(`Engagement rate: ${fmtPct(avgEng)} overall`)
-        if (mf > 0) metrics.push(`+${fmtN(mf)} new followers in the period`)
+        const avgEngRate = mp.length > 0 ? mp.reduce((s, p) => s + p.engagementRate, 0) / mp.length : 0
+        const followerTotal = member.followerHistory.length > 0 ? member.followerHistory.filter(f => { const d = parseFlexDate(f.date); return d ? monthKey(d) === selectedMonth : false }).reduce((s, f) => s + f.newFollowers, 0) || member.followerHistory.reduce((s, f) => s + f.newFollowers, 0) : mp.reduce((s, p) => s + p.follows, 0)
+        if (avgEngRate > 0) metrics.push(`Engagement rate: ${fmtPct(avgEngRate)} overall`)
+        if (followerTotal > 0) metrics.push(`+${fmtN(followerTotal)} new followers in the period`)
         if (aboveBenchmark > 0) metrics.push(`${aboveBenchmark} of ${mp.length} posts (${Math.round(aboveBenchmark / mp.length * 100)}%) hit top 25% or better`)
         if (aboveTop10 > 0) metrics.push(`${aboveTop10} post${aboveTop10 > 1 ? 's' : ''} reached top 10% performance (${fmtN(BENCHMARKS.top10PerPost)}+ impressions)`)
         return (
