@@ -541,20 +541,51 @@ function UploadCard({ type, label, hint, loaded, onFile }: {
   )
 }
 
+// ─── Undo Toast ──────────────────────────────────────────────────────────────
+
+function UndoToast({ label, startedAt, duration, onUndo }: {
+  label: string; startedAt: number; duration: number; onUndo: () => void
+}) {
+  const [elapsed, setElapsed] = useState(0)
+
+  useEffect(() => {
+    const interval = setInterval(() => setElapsed(Date.now() - startedAt), 50)
+    return () => clearInterval(interval)
+  }, [startedAt])
+
+  const remaining = Math.max(0, Math.ceil((duration - elapsed) / 1000))
+  const progress = Math.min(1, elapsed / duration)
+
+  return (
+    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-[#2D2D2D] text-white text-sm pl-5 pr-3 py-3 rounded-xl shadow-lg flex items-center gap-4 min-w-[280px]">
+      <span className="flex-1">{label}</span>
+      <button onClick={onUndo}
+        className="font-semibold px-3 py-1 rounded-lg hover:bg-white/10 transition-colors whitespace-nowrap"
+        style={{ color: BRAND_LIGHT }}>
+        Undo ({remaining}s)
+      </button>
+      <div className="absolute bottom-0 left-0 right-0 h-0.5 rounded-b-xl overflow-hidden">
+        <div className="h-full" style={{ width: `${(1 - progress) * 100}%`, backgroundColor: BRAND }} />
+      </div>
+    </div>
+  )
+}
+
 // ─── Manage View ──────────────────────────────────────────────────────────────
 
 type NewMemberData = { name: string; role: string; posts: Post[]; icpSignals: ICPSignal[]; followerHistory: FollowerEntry[] }
 
-function ManageView({ members, orgName, onUpdate, onDelete, onAdd, onDone, orgIcpSignals, onOrgIcpUpload, onOrgIcpClear }: {
+function ManageView({ members, orgName, onUpdate, onUpdateWithUndo, onDelete, onAdd, onDone, orgIcpSignals, onOrgIcpUpload, onOrgIcpClear }: {
   members: Member[]
   orgName: string
   onUpdate: (id: string, patch: Partial<Pick<Member, 'name' | 'role' | 'posts' | 'icpSignals' | 'followerHistory'>>) => void
+  onUpdateWithUndo: (id: string, patch: Partial<Pick<Member, 'posts' | 'icpSignals' | 'followerHistory'>>, memberName: string) => void
   onDelete: (id: string) => void
   onAdd: (data: NewMemberData) => Promise<void>
   onDone: () => void
   orgIcpSignals: ICPSignal[]
   onOrgIcpUpload: (signals: ICPSignal[]) => Promise<void>
-  onOrgIcpClear: () => Promise<void>
+  onOrgIcpClear: () => void
 }) {
   const [showAddForm, setShowAddForm] = useState(members.length === 0)
   const [newName, setNewName] = useState('')
@@ -570,6 +601,9 @@ function ManageView({ members, orgName, onUpdate, onDelete, onAdd, onDone, orgIc
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editName, setEditName] = useState('')
   const [editRole, setEditRole] = useState('')
+  const [confirmClearIcp, setConfirmClearIcp] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState<Member | null>(null)
+  const [deleteConfirmText, setDeleteConfirmText] = useState('')
   const [pendingUpload, setPendingUpload] = useState<{
     memberId: string; memberName: string; type: 'posts' | 'icp'
     data: Partial<Pick<Member, 'posts' | 'icpSignals' | 'followerHistory'>>
@@ -769,7 +803,7 @@ function ManageView({ members, orgName, onUpdate, onDelete, onAdd, onDone, orgIc
                           <>
                             <button onClick={() => { setEditingId(m.id); setEditName(m.name); setEditRole(m.role) }}
                               className="text-xs text-[#6B6B6B] hover:text-[#4A4A4A] px-2 py-1 rounded hover:bg-[#FEFDFB]">Edit</button>
-                            <button onClick={() => { if (confirm(`Remove ${m.name}?`)) onDelete(m.id) }}
+                            <button onClick={() => { setDeleteTarget(m); setDeleteConfirmText('') }}
                               className="text-[#D4D4D4] hover:text-red-400 px-2 py-1 rounded hover:bg-red-50 transition-colors">
                               <Trash2 className="w-3.5 h-3.5" />
                             </button>
@@ -837,7 +871,7 @@ function ManageView({ members, orgName, onUpdate, onDelete, onAdd, onDone, orgIc
               <p className="text-xs text-[#6B6B6B] mt-0.5">Not attributed to a specific member</p>
             </div>
             {orgIcpSignals.length > 0 && (
-              <button onClick={() => onOrgIcpClear()}
+              <button onClick={() => setConfirmClearIcp(true)}
                 className="text-xs text-red-400 hover:text-red-600 transition-colors">Clear</button>
             )}
           </div>
@@ -903,14 +937,82 @@ function ManageView({ members, orgName, onUpdate, onDelete, onAdd, onDone, orgIc
                 Cancel
               </button>
               <button onClick={() => {
-                const { memberId, data, onResult } = pendingUpload
+                const { memberId, memberName, data, onResult } = pendingUpload
                 setPendingUpload(null)
-                onUpdate(memberId, data)
+                onUpdateWithUndo(memberId, data, memberName)
                 onResult(true, pendingUpload.summary.noFollowerData ? 'Updated (no follower data in file)' : undefined)
               }}
                 className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-white"
                 style={{ backgroundColor: BRAND }}>
                 Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {confirmClearIcp && (
+        <div className="fixed inset-0 bg-black/30 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl border border-[#E8ECF0] p-6 max-w-sm w-full shadow-xl">
+            <p className="text-sm font-semibold text-[#2D2D2D] mb-1">Clear Org ICP Signals?</p>
+            <p className="text-xs text-[#6B6B6B] mb-4">
+              This will remove all {orgIcpSignals.length} org-level ICP signals. You&apos;ll have a few seconds to undo after confirming.
+            </p>
+            <div className="flex gap-2">
+              <button onClick={() => setConfirmClearIcp(false)}
+                className="flex-1 py-2.5 rounded-xl text-sm font-medium border border-[#E8ECF0] text-[#4A4A4A]">
+                Cancel
+              </button>
+              <button onClick={() => { setConfirmClearIcp(false); onOrgIcpClear() }}
+                className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-white bg-red-600 hover:bg-red-700 transition-colors rounded-xl">
+                Clear All Signals
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {deleteTarget && (
+        <div className="fixed inset-0 bg-black/30 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl border border-[#E8ECF0] p-6 max-w-sm w-full shadow-xl">
+            <p className="text-sm font-semibold text-[#2D2D2D] mb-1">Remove {deleteTarget.name}?</p>
+            <p className="text-xs text-[#6B6B6B] mb-4">This will permanently delete:</p>
+            <div className="bg-red-50 border border-red-100 rounded-lg px-3 py-2.5 mb-4 space-y-1">
+              {deleteTarget.posts.length > 0 && (
+                <p className="text-xs text-red-800">{deleteTarget.posts.length} posts ({fmtN(deleteTarget.posts.reduce((s, p) => s + p.impressions, 0))} impressions)</p>
+              )}
+              {deleteTarget.icpSignals.length > 0 && (
+                <p className="text-xs text-red-800">{deleteTarget.icpSignals.length} ICP signals</p>
+              )}
+              {deleteTarget.followerHistory.length > 0 && (
+                <p className="text-xs text-red-800">{deleteTarget.followerHistory.length} months of follower data</p>
+              )}
+              <p className="text-xs text-red-800">All goals and settings</p>
+            </div>
+            <p className="text-xs text-[#6B6B6B] mb-2">
+              Type <span className="font-semibold text-[#2D2D2D]">{deleteTarget.name.split(' ')[0].toLowerCase()}</span> to confirm:
+            </p>
+            <input
+              value={deleteConfirmText}
+              onChange={e => setDeleteConfirmText(e.target.value)}
+              className="w-full bg-[#FAF8F3] border border-[#E8ECF0] text-[#2D2D2D] text-sm rounded-lg px-3 py-2 outline-none mb-4"
+              placeholder={deleteTarget.name.split(' ')[0].toLowerCase()}
+              autoFocus
+            />
+            <div className="flex gap-2">
+              <button onClick={() => setDeleteTarget(null)}
+                className="flex-1 py-2.5 rounded-xl text-sm font-medium border border-[#E8ECF0] text-[#4A4A4A]">
+                Cancel
+              </button>
+              <button
+                onClick={() => { onDelete(deleteTarget.id); setDeleteTarget(null) }}
+                disabled={deleteConfirmText.toLowerCase() !== deleteTarget.name.split(' ')[0].toLowerCase()}
+                className="flex-1 py-2.5 rounded-xl text-sm font-semibold transition-colors"
+                style={{
+                  backgroundColor: deleteConfirmText.toLowerCase() === deleteTarget.name.split(' ')[0].toLowerCase() ? '#DC2626' : '#E8ECF0',
+                  color: deleteConfirmText.toLowerCase() === deleteTarget.name.split(' ')[0].toLowerCase() ? 'white' : '#D4D4D4',
+                }}>
+                Delete Permanently
               </button>
             </div>
           </div>
@@ -1625,6 +1727,62 @@ export default function OrgPage({ params }: { params: { slug: string } }) {
   const [orgIcpSignals, setOrgIcpSignals] = useState<ICPSignal[]>([])
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
+  // ─── Undo system ───────────────────────────────────────────────────────────
+  const undoRef = useRef<{
+    label: string
+    execute: () => Promise<void>
+    rollback: () => void
+    timeoutId: ReturnType<typeof setTimeout>
+    startedAt: number
+    duration: number
+  } | null>(null)
+  const [undoAction, setUndoAction] = useState<{
+    label: string; startedAt: number; duration: number
+  } | null>(null)
+
+  const scheduleUndo = useCallback((action: {
+    label: string; duration?: number
+    execute: () => Promise<void>; rollback: () => void
+  }) => {
+    // If an existing undo is pending, execute it immediately
+    if (undoRef.current) {
+      clearTimeout(undoRef.current.timeoutId)
+      const pending = undoRef.current
+      pending.execute().catch(err => {
+        pending.rollback()
+        setSaveError((err as Error).message || 'Action failed')
+      })
+    }
+
+    const duration = action.duration ?? 7000
+    const startedAt = Date.now()
+
+    const timeoutId = setTimeout(() => {
+      undoRef.current = null
+      setUndoAction(null)
+      action.execute().catch(err => {
+        action.rollback()
+        setSaveError((err as Error).message || 'Action failed')
+      })
+    }, duration)
+
+    const entry = { ...action, timeoutId, startedAt, duration }
+    undoRef.current = entry
+    setUndoAction({ label: action.label, startedAt, duration })
+  }, [])
+
+  const cancelUndo = useCallback(() => {
+    if (!undoRef.current) return
+    clearTimeout(undoRef.current.timeoutId)
+    undoRef.current.rollback()
+    undoRef.current = null
+    setUndoAction(null)
+  }, [])
+
+  useEffect(() => {
+    return () => { if (undoRef.current) clearTimeout(undoRef.current.timeoutId) }
+  }, [])
+
   useEffect(() => {
     if (!apiKey) { setError('Access denied — missing API key. Use the link provided by your admin.'); setLoading(false); return }
     authFetch(`/api/org/${slug}`)
@@ -1665,9 +1823,32 @@ export default function OrgPage({ params }: { params: { slug: string } }) {
       .catch(e => { setMembers(prev); setSaveError(e.message || 'Failed to save changes') })
   }
 
+  function handleUpdateWithUndo(id: string, patch: Partial<Pick<Member, 'posts' | 'icpSignals' | 'followerHistory'>>, memberName: string) {
+    const prev = [...members]
+    setMembers(ms => ms.map(m => m.id === id ? { ...m, ...patch } : m))
+    setSaveError('')
+
+    scheduleUndo({
+      label: `Updated ${memberName.split(' ')[0]}`,
+      duration: 10000,
+      execute: async () => {
+        const r = await authFetch(`/api/org/${slug}/members/${id}`, {
+          method: 'PATCH',
+          body: JSON.stringify(patch),
+        })
+        if (!r.ok) throw new Error(`Save failed (${r.status})`)
+      },
+      rollback: () => { setMembers(prev) },
+    })
+  }
+
   function handleDelete(id: string) {
-    const prev = members
+    const member = members.find(m => m.id === id)
+    if (!member) return
+    const prev = [...members]
     const prevTab = activeTab
+    const prevGoals = { ...goals }
+
     setMembers(ms => {
       const updated = ms.filter(m => m.id !== id)
       if (updated.length === 0) setView('manage')
@@ -1675,9 +1856,20 @@ export default function OrgPage({ params }: { params: { slug: string } }) {
       return updated
     })
     setSaveError('')
-    authFetch(`/api/org/${slug}/members/${id}`, { method: 'DELETE' })
-      .then(r => { if (!r.ok) throw new Error(`Delete failed (${r.status})`) })
-      .catch(e => { setMembers(prev); setActiveTab(prevTab); setSaveError(e.message || 'Failed to delete member') })
+
+    scheduleUndo({
+      label: `Removed ${member.name.split(' ')[0]}`,
+      duration: 7000,
+      execute: async () => {
+        const r = await authFetch(`/api/org/${slug}/members/${id}`, { method: 'DELETE' })
+        if (!r.ok) throw new Error(`Delete failed (${r.status})`)
+      },
+      rollback: () => {
+        setMembers(prev)
+        setActiveTab(prevTab)
+        setGoals(prevGoals)
+      },
+    })
   }
 
   async function handleOrgIcpUpload(signals: ICPSignal[]) {
@@ -1694,11 +1886,20 @@ export default function OrgPage({ params }: { params: { slug: string } }) {
     }
   }
 
-  async function handleOrgIcpClear() {
+  function handleOrgIcpClear() {
     const prev = orgIcpSignals
+    const count = prev.length
     setOrgIcpSignals([])
-    const res = await authFetch(`/api/org/${slug}/org-icp`, { method: 'DELETE' })
-    if (!res.ok) { setOrgIcpSignals(prev); setSaveError('Failed to clear ICP signals') }
+
+    scheduleUndo({
+      label: `Cleared ${count} ICP signals`,
+      duration: 7000,
+      execute: async () => {
+        const res = await authFetch(`/api/org/${slug}/org-icp`, { method: 'DELETE' })
+        if (!res.ok) throw new Error('Failed to clear ICP signals')
+      },
+      rollback: () => { setOrgIcpSignals(prev) },
+    })
   }
 
   async function handleAdd(data: NewMemberData) {
@@ -1737,10 +1938,21 @@ export default function OrgPage({ params }: { params: { slug: string } }) {
     )
   }
 
+  const undoToastEl = undoAction ? (
+    <UndoToast label={undoAction.label} startedAt={undoAction.startedAt}
+      duration={undoAction.duration} onUndo={cancelUndo} />
+  ) : null
+
   if (view === 'manage') {
-    return <ManageView members={members} orgName={orgName} onUpdate={handleUpdate} onDelete={handleDelete} onAdd={handleAdd}
-      onDone={() => { if (members.length > 0) setView('dashboard') }}
-      orgIcpSignals={orgIcpSignals} onOrgIcpUpload={handleOrgIcpUpload} onOrgIcpClear={handleOrgIcpClear} />
+    return (
+      <>
+        <ManageView members={members} orgName={orgName} onUpdate={handleUpdate} onUpdateWithUndo={handleUpdateWithUndo}
+          onDelete={handleDelete} onAdd={handleAdd}
+          onDone={() => { if (members.length > 0) setView('dashboard') }}
+          orgIcpSignals={orgIcpSignals} onOrgIcpUpload={handleOrgIcpUpload} onOrgIcpClear={handleOrgIcpClear} />
+        {undoToastEl}
+      </>
+    )
   }
 
   const activeMember = members.find(m => m.id === activeTab) ?? null
@@ -1787,7 +1999,7 @@ export default function OrgPage({ params }: { params: { slug: string } }) {
               <SectionLabel>Members</SectionLabel>
               {members.map(m => (
                 <NavItem key={m.id} label={m.name.split(' ')[0]} active={activeTab === m.id}
-                  onClick={() => navClick(m.id)} onDelete={() => handleDelete(m.id)}
+                  onClick={() => navClick(m.id)}
                   icon={
                     <div className="w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-bold flex-shrink-0"
                       style={{ backgroundColor: activeTab === m.id ? 'rgba(255,255,255,0.3)' : '#E8ECF0', color: activeTab === m.id ? 'white' : BRAND }}>
@@ -1853,12 +2065,12 @@ export default function OrgPage({ params }: { params: { slug: string } }) {
         </div>
       </main>
 
-      {saveError && (
+      {undoToastEl || (saveError && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-red-600 text-white text-sm px-5 py-3 rounded-xl shadow-lg flex items-center gap-3 z-50">
           <span>{saveError}</span>
           <button onClick={() => setSaveError('')} className="text-white/70 hover:text-white font-bold">✕</button>
         </div>
-      )}
+      ))}
     </div>
   )
 }
