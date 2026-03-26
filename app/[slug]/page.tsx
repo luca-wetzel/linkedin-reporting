@@ -754,8 +754,8 @@ function ManageView({ members, orgName, onUpdate, onUpdateWithUndo, onDelete, on
                 <p className="text-xs text-[#6B6B6B] mt-2 italic">Export as CSV or XLSX — both work. Always export 90 days. The dashboard merges intelligently — no duplicates.</p>
               </div>
               <div>
-                <p className="text-[10px] font-semibold uppercase tracking-widest mb-2" style={{ color: BRAND }}>ICP Signals CSV (optional — from notus)</p>
-                <p className="text-xs text-[#4A4A4A] leading-relaxed">Export the ICP signal tracking data from notus. Expected columns: Date, Name, Company, Title, Action, ICP Match (true/false).</p>
+                <p className="text-[10px] font-semibold uppercase tracking-widest mb-2" style={{ color: BRAND }}>ICP Signals (optional)</p>
+                <p className="text-xs text-[#4A4A4A] leading-relaxed">Reach out to notus to add the ICP data. We&apos;ll upload this for you.</p>
               </div>
             </div>
           )}
@@ -853,7 +853,7 @@ function ManageView({ members, orgName, onUpdate, onUpdateWithUndo, onDelete, on
             </div>
             <div className="grid grid-cols-2 gap-3 mb-4">
               <UploadCard type="posts" label="LinkedIn Analytics" hint="Required · CSV or XLSX · 90-day export" loaded={newPostsLoaded} onFile={handleNewFile} />
-              <UploadCard type="icp" label="ICP Signals CSV" hint="Optional · from notus" loaded={newIcpLoaded} onFile={handleNewFile} />
+              <UploadCard type="icp" label="ICP Signals" hint="Optional · provided by notus" loaded={newIcpLoaded} onFile={handleNewFile} />
             </div>
             {addError && <p className="text-xs text-red-500 mb-3">{addError}</p>}
             <button onClick={addMember} disabled={!newName.trim() || !newPostsLoaded || adding}
