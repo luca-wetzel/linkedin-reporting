@@ -1144,6 +1144,75 @@ function ICPOverview({ members, orgIcpSignals }: { members: Member[]; orgIcpSign
           </div>
         </div>
       )}
+
+      {members.length > 0 && (() => {
+        const icpRows = members.map(m => {
+          const memberSignals = m.icpSignals.length
+          const attributedOrg = orgIcpSignals.filter(s => attributeOrgSignal(s, [m]) === m.name).length
+          return { member: m, total: memberSignals + attributedOrg }
+        }).filter(r => r.total > 0).sort((a, b) => b.total - a.total)
+        const maxIcp = icpRows[0]?.total ?? 1
+        const unattributed = orgIcpSignals.filter(s => !attributeOrgSignal(s, members)).length
+
+        if (icpRows.length === 0) return null
+        return (
+          <div className="bg-white border border-[#E8ECF0] rounded-xl overflow-hidden">
+            <div className="px-6 py-4 border-b border-[#EEF1F5]">
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-[#6B6B6B]">ICP Leaderboard — All Time</p>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-[#FEFDFB]">
+                    {['#', 'Name', 'ICP Signals', 'Companies Reached'].map(h => (
+                      <th key={h} className="px-5 py-3 text-left text-[10px] font-semibold uppercase tracking-widest text-[#6B6B6B]">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {icpRows.map((row, i) => {
+                    const memberCompanies = new Set([
+                      ...row.member.icpSignals.map(s => s.company).filter(Boolean),
+                      ...orgIcpSignals.filter(s => attributeOrgSignal(s, [row.member]) === row.member.name).map(s => s.company).filter(Boolean),
+                    ])
+                    return (
+                      <tr key={row.member.id} className="border-b border-[#FEFDFB] hover:bg-[#FAF8F3] transition-colors">
+                        <td className="px-5 py-4">
+                          {i < 3 ? <span className="text-lg">{['🥇', '🥈', '🥉'][i]}</span> : <span className="text-sm text-[#D4D4D4] font-mono">#{i + 1}</span>}
+                        </td>
+                        <td className="px-5 py-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-xs flex-shrink-0"
+                              style={{ backgroundColor: i === 0 ? BRAND : '#C7BFB8' }}>
+                              {row.member.name.charAt(0).toUpperCase()}
+                            </div>
+                            <div>
+                              <p className="font-medium text-[#2D2D2D]">{row.member.name}</p>
+                              {row.member.role && <p className="text-xs text-[#6B6B6B]">{row.member.role}</p>}
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-5 py-4">
+                          <span className="font-semibold text-[#2D2D2D]">{row.total}</span>
+                          <div className="mt-1.5 h-1 w-20 bg-[#EEF1F5] rounded-full overflow-hidden">
+                            <div className="h-full rounded-full" style={{ width: `${(row.total / maxIcp) * 100}%`, backgroundColor: BRAND }} />
+                          </div>
+                        </td>
+                        <td className="px-5 py-4 text-[#4A4A4A]">{memberCompanies.size}</td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+            {unattributed > 0 && (
+              <div className="px-5 py-3 bg-[#FAF8F3] border-t border-[#EEF1F5]">
+                <span className="text-[10px] text-[#D4D4D4]">+ {unattributed} unattributed signal{unattributed > 1 ? 's' : ''} (org-level, not matched to a member)</span>
+              </div>
+            )}
+          </div>
+        )
+      })()}
     </div>
   )
 }
