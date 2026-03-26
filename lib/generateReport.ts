@@ -359,14 +359,7 @@ async function buildPage1(
   }
 
   // ── Footer ──
-  doc.setDrawColor(...RULE)
-  doc.line(14, PH - 10, PW - 14, PH - 10)
-  doc.addImage(iconImg, 'PNG', 14, PH - 8.5, 4.5, 4.5)
-  doc.setFont('helvetica', 'normal')
-  doc.setFontSize(6.5)
-  doc.setTextColor(...GRAY)
-  doc.text('notus', 20, PH - 5.2)
-  doc.text('1', PW - 14, PH - 5.2, { align: 'right' })
+  drawPageFooter(doc, iconImg, 1)
 }
 
 // ─── Page 2: ICP Pipeline ───────────────────────────────────────────────────
@@ -438,7 +431,25 @@ function buildPage2(
     tableWidth: halfW,
   })
 
-  // Footer
+  drawPageFooter(doc, iconImg, totalPages)
+}
+
+// ─── Shared header/footer ───────────────────────────────────────────────────
+
+function drawPageHeader(doc: jsPDF, orgName: string, iconImg: string) {
+  doc.setFillColor(...BRAND)
+  doc.rect(0, 0, PW, 14, 'F')
+  doc.addImage(iconImg, 'PNG', 10, 3, 8, 8)
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(9)
+  doc.setTextColor(...WHITE)
+  doc.text('notus', 20, 9.5)
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(8)
+  doc.text(orgName, PW - 14, 9.5, { align: 'right' })
+}
+
+function drawPageFooter(doc: jsPDF, iconImg: string, pageNum: number) {
   doc.setDrawColor(...RULE)
   doc.line(14, PH - 10, PW - 14, PH - 10)
   doc.addImage(iconImg, 'PNG', 14, PH - 8.5, 4.5, 4.5)
@@ -446,10 +457,208 @@ function buildPage2(
   doc.setFontSize(6.5)
   doc.setTextColor(...GRAY)
   doc.text('notus', 20, PH - 5.2)
-  doc.text(`2`, PW - 14, PH - 5.2, { align: 'right' })
+  doc.text(pageNum.toString(), PW - 14, PH - 5.2, { align: 'right' })
+}
+
+// ─── Per-member page ────────────────────────────────────────────────────────
+
+function buildMemberPage(
+  doc: jsPDF, orgName: string, iconImg: string, pageNum: number,
+  member: Member, period: string, selectedMonth: string,
+  orgIcpSignals: ICPSignal[], goals: MemberGoals | undefined,
+) {
+  drawPageHeader(doc, orgName, iconImg)
+
+  const isAll = selectedMonth === 'all'
+
+  // Get all months for this member
+  const monthSet = new Set<string>()
+  member.posts.forEach(p => { const d = parseFlexDate(p.date); if (d) monthSet.add(monthKey(d)) })
+  const months = Array.from(monthSet).sort().reverse()
+  const latestMonth = months[0] ?? monthKey(new Date())
+
+  // Compute for the selected period
+  const mp = isAll ? member.posts : postsForMonth(member.posts, selectedMonth)
+  const mf = isAll
+    ? member.followerHistory.reduce((s, f) => s + f.newFollowers, 0)
+    : followerGrowthForMonth(member.posts, member.followerHistory, selectedMonth)
+  const mIcp = isAll ? member.icpSignals : icpForMonth(member.icpSignals, selectedMonth)
+  const attOrg = (isAll ? orgIcpSignals : icpForMonth(orgIcpSignals, selectedMonth))
+    .filter(s => attributeOrgSignal(s, [member]) === member.name)
+  const icpTotal = mIcp.length + attOrg.length
+  const totalImp = mp.reduce((s, p) => s + p.impressions, 0)
+  const avgPerPost = mp.length > 0 ? totalImp / mp.length : 0
+  const avgEng = mp.length > 0 ? mp.reduce((s, p) => s + p.engagementRate, 0) / mp.length : 0
+  const memberTier = tier(avgPerPost)
+
+  let y = 22
+
+  // ── Member name + tier ──
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(18)
+  doc.setTextColor(...DARK)
+  doc.text(member.name, 14, y)
+
+  // Tier badge
+  if (mp.length > 0) {
+    const nameW = doc.getTextWidth(member.name)
+    const tierText = memberTier
+    doc.setFontSize(7)
+    const tierW = doc.getTextWidth(tierText) + 6
+    const tierX = 14 + nameW + 6
+    doc.setFillColor(...BRAND)
+    doc.roundedRect(tierX, y - 5, tierW, 7, 2, 2, 'F')
+    doc.setTextColor(...WHITE)
+    doc.text(tierText, tierX + 3, y - 0.8)
+  }
+
+  // Role + period
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(9)
+  doc.setTextColor(...GRAY)
+  doc.text(`${member.role || 'Team Member'}  ·  ${period}`, 14, y + 6)
+  y += 14
+
+  // ── KPI row ──
+  const kpiH = 28
+  const gap = 5
+  const hasIcp = icpTotal > 0 || member.icpSignals.length > 0
+  const numKpis = hasIcp ? 4 : 3
+  const kpiW = (PW - 28 - gap * (numKpis - 1)) / numKpis
+
+  kpiBlock(doc, 14, y, kpiW, kpiH, 'Impressions', fmtN(totalImp), `${mp.length} posts · ${mp.length > 0 ? fmtN(avgPerPost) : '–'}/post`)
+  kpiBlock(doc, 14 + (kpiW + gap), y, kpiW, kpiH, 'Follower Growth', `+${fmtN(mf)}`, period)
+  kpiBlock(doc, 14 + (kpiW + gap) * 2, y, kpiW, kpiH, 'Engagement Rate', mp.length > 0 ? fmtPct(avgEng) : '–', `Benchmark: ${BENCHMARKS.top25EngRate}%`)
+  if (hasIcp) {
+    kpiBlock(doc, 14 + (kpiW + gap) * 3, y, kpiW, kpiH, 'ICP Signals', icpTotal.toString(), mIcp.filter(s => s.isIcp).length > 0 ? `${mIcp.filter(s => s.isIcp).length} confirmed ICP` : 'All signals')
+  }
+  y += kpiH + 8
+
+  // ── Monthly breakdown (left side) + Goals (right side) ──
+  const colW = (PW - 28 - 8) / 2
+
+  // Left: Monthly performance table
+  sectionLabel(doc, 14, y, 'Monthly Performance')
+  const monthTableY = y + 3
+
+  // Compute per-month data (latest first)
+  const monthData = months.slice(0, 8).map(mk => {
+    const mPosts = postsForMonth(member.posts, mk)
+    const mImpTotal = mPosts.reduce((s, p) => s + p.impressions, 0)
+    const mFol = followerGrowthForMonth(member.posts, member.followerHistory, mk)
+    const mAvg = mPosts.length > 0 ? mImpTotal / mPosts.length : 0
+    return { month: mk, posts: mPosts.length, imp: mImpTotal, fol: mFol, avg: mAvg }
+  })
+
+  if (monthData.length > 0) {
+    autoTable(doc, {
+      startY: monthTableY,
+      head: [['Month', 'Posts', 'Impressions', 'Avg/Post', 'Followers']],
+      body: monthData.map(d => [
+        monthLabel(d.month),
+        d.posts.toString(),
+        fmtN(d.imp),
+        d.posts > 0 ? fmtN(d.avg) : '–',
+        d.fol > 0 ? `+${fmtN(d.fol)}` : '–',
+      ]),
+      headStyles: { fillColor: BRAND, textColor: WHITE, fontSize: 7, fontStyle: 'bold', cellPadding: 2.5 },
+      bodyStyles: { fontSize: 7.5, textColor: DARK, cellPadding: 2.5 },
+      alternateRowStyles: { fillColor: BG },
+      styles: { lineWidth: 0 },
+      margin: { left: 14, right: PW - 14 - colW },
+      tableWidth: colW,
+    })
+  }
+
+  // Right side: Goals + Insights
+  const rightX = 14 + colW + 8
+
+  // Goals
+  if (goals) {
+    sectionLabel(doc, rightX, y, 'Monthly Goals')
+    let gy = y + 5
+
+    const goalItems = [
+      { label: 'Posts', current: postsForMonth(member.posts, latestMonth).length, goal: goals.monthlyPosts },
+      { label: 'Impressions', current: postsForMonth(member.posts, latestMonth).reduce((s, p) => s + p.impressions, 0), goal: goals.monthlyImpressions },
+      { label: 'Followers', current: followerGrowthForMonth(member.posts, member.followerHistory, latestMonth), goal: goals.monthlyFollowers },
+      { label: 'ICP Signals', current: icpForMonth(member.icpSignals, latestMonth).length, goal: goals.monthlyIcpSignals },
+    ]
+
+    for (const g of goalItems) {
+      const pct = g.goal > 0 ? Math.min(100, (g.current / g.goal) * 100) : 0
+
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(7)
+      doc.setTextColor(...MID)
+      doc.text(g.label, rightX, gy)
+      doc.text(`${fmtN(g.current)} / ${fmtN(g.goal)}`, rightX + colW - 2, gy, { align: 'right' })
+      gy += 3
+
+      // Progress bar background
+      doc.setFillColor(...RULE)
+      doc.roundedRect(rightX, gy, colW - 2, 2.5, 1, 1, 'F')
+      // Progress bar fill
+      if (pct > 0) {
+        const barColor: [number, number, number] = pct >= 100 ? [22, 163, 74] : pct >= 60 ? [22, 163, 74] : [217, 119, 6]
+        doc.setFillColor(...barColor)
+        doc.roundedRect(rightX, gy, Math.max(1, (pct / 100) * (colW - 2)), 2.5, 1, 1, 'F')
+      }
+      gy += 6
+    }
+
+    gy += 3
+    doc.setFont('helvetica', 'italic')
+    doc.setFontSize(6.5)
+    doc.setTextColor(...GRAY)
+    doc.text(`Goals for ${monthLabel(latestMonth)}`, rightX, gy)
+    gy += 8
+
+    // Insights
+    const insights: string[] = []
+    if (avgPerPost >= BENCHMARKS.top10PerPost) insights.push(`${fmtN(avgPerPost)} impressions/post — top 10% of all creators tracked by notus.`)
+    else if (avgPerPost >= BENCHMARKS.top25PerPost) insights.push(`${fmtN(avgPerPost)} impressions/post — above the top 25% benchmark (${fmtN(BENCHMARKS.top25PerPost)}).`)
+    else if (avgPerPost > 0) insights.push(`${fmtN(avgPerPost)} impressions/post — below the top 25% threshold (${fmtN(BENCHMARKS.top25PerPost)}).`)
+
+    if (mf >= BENCHMARKS.top25MonthlyFollowers) insights.push(`+${fmtN(mf)} followers exceeds the top 25% benchmark (+${BENCHMARKS.top25MonthlyFollowers}/month).`)
+    if (avgEng >= BENCHMARKS.top25EngRate) insights.push(`${fmtPct(avgEng)} engagement rate — above benchmark (${BENCHMARKS.top25EngRate}%).`)
+
+    const topPost = mp.reduce<Post | null>((top, p) => (!top || p.impressions > top.impressions) ? p : top, null)
+    if (topPost && avgPerPost > 0 && topPost.impressions > avgPerPost * 1.5) {
+      insights.push(`Top post: ${fmtN(topPost.impressions)} impressions (${(topPost.impressions / avgPerPost).toFixed(1)}x above average).`)
+    }
+
+    if (icpTotal > 0) {
+      const confirmed = mIcp.filter(s => s.isIcp).length
+      if (confirmed > 0) insights.push(`${confirmed} confirmed ICP match${confirmed > 1 ? 'es' : ''} — real pipeline opportunities.`)
+    }
+
+    if (insights.length > 0) {
+      sectionLabel(doc, rightX, gy, 'Insights')
+      gy += 4
+
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(7)
+      doc.setTextColor(...DARK)
+      for (const ins of insights) {
+        doc.setFillColor(...BRAND)
+        doc.circle(rightX + 2, gy + 0.5, 0.8, 'F')
+        const lines = doc.splitTextToSize(ins, colW - 8)
+        doc.text(lines, rightX + 6, gy + 1.5)
+        gy += lines.length * 3.5 + 2
+      }
+    }
+  }
+
+  drawPageFooter(doc, iconImg, pageNum)
 }
 
 // ─── Main ───────────────────────────────────────────────────────────────────
+
+const DEFAULT_GOALS: MemberGoals = {
+  monthlyPosts: 8, monthlyImpressions: 10000,
+  monthlyFollowers: 100, monthlyIcpSignals: 20,
+}
 
 export async function generateReport(data: ReportData): Promise<void> {
   const c = compute(data)
@@ -461,6 +670,7 @@ export async function generateReport(data: ReportData): Promise<void> {
   const iconImg = await svgToImage(ICON_SVG, 79, 79)
 
   const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' })
+  let pageNum = 1
 
   // Page 1: Performance Overview
   await buildPage1(doc, data.orgName, c.period, logoWhite, iconImg,
@@ -469,8 +679,18 @@ export async function generateReport(data: ReportData): Promise<void> {
 
   // Page 2: ICP Pipeline (only if data)
   if (hasIcp) {
+    pageNum++
     doc.addPage()
-    buildPage2(doc, data.orgName, iconImg, c.totIcp, c.topComp, c.icpRows, c.unattr, hasIcp ? 2 : 1)
+    buildPage2(doc, data.orgName, iconImg, c.totIcp, c.topComp, c.icpRows, c.unattr, pageNum)
+  }
+
+  // Per-member pages (sorted by impressions, matching leaderboard order)
+  for (const row of c.rows) {
+    pageNum++
+    doc.addPage()
+    buildMemberPage(doc, data.orgName, iconImg, pageNum,
+      row.m, c.period, data.selectedMonth,
+      data.orgIcpSignals, data.goals[row.m.id] ?? DEFAULT_GOALS)
   }
 
   const slug = data.orgName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
