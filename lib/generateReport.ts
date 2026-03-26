@@ -344,7 +344,9 @@ async function buildPage1(
     y += 5
 
     const maxVal = Math.max(...trendReversed.map(d => d.imp))
-    const barMax = PW - 105
+    const barStartX = 46
+    const valueX = PW - 14 // fixed right-align for all values
+    const barMax = valueX - barStartX - 16 // leave room for value text
     const barH = 6
     const rowH = barH + 3
 
@@ -353,7 +355,6 @@ async function buildPage1(
     const maxRows = Math.floor(available / rowH)
     const shown = trendReversed.slice(0, Math.min(trendReversed.length, maxRows))
 
-    const barStartX = 46 // fixed start for all bars
     for (const pt of shown) {
       const bw = maxVal > 0 ? (pt.imp / maxVal) * barMax : 0
       doc.setFont('helvetica', 'normal')
@@ -367,7 +368,7 @@ async function buildPage1(
       doc.setFont('helvetica', 'bold')
       doc.setFontSize(8.5)
       doc.setTextColor(...DARK)
-      doc.text(fmtN(pt.imp), barStartX + bw + 3, y + 4.5)
+      doc.text(fmtN(pt.imp), valueX, y + 4.5, { align: 'right' })
       y += rowH
     }
   }
@@ -410,6 +411,11 @@ function buildPage2(
   kpiBlock(doc, 14 + kpiW + 5, y, kpiW, 28, 'Companies Reached', topComp.length.toString(), topComp[0] ? `Top: ${topComp[0][0]}` : '–')
   kpiBlock(doc, 14 + (kpiW + 5) * 2, y, kpiW, 28, 'Top Company', topComp[0]?.[0] ?? '–', topComp[0] ? `${topComp[0][1]} signals` : '–')
   y += 36
+
+  // Divider
+  doc.setDrawColor(...RULE)
+  doc.setLineWidth(0.3)
+  doc.line(14, y - 2, PW - 14, y - 2)
 
   // Two tables side by side
   const halfW = (PW - 28 - 8) / 2
@@ -561,26 +567,36 @@ function buildMemberPage(
   sectionLabel(doc, 14, y, 'Monthly Performance')
   const monthTableY = y + 3
 
-  // Compute per-month data (latest first)
+  // Compute per-month data (latest first), including ICP with org attribution
   const monthData = months.slice(0, 8).map(mk => {
     const mPosts = postsForMonth(member.posts, mk)
     const mImpTotal = mPosts.reduce((s, p) => s + p.impressions, 0)
     const mFol = followerGrowthForMonth(member.posts, member.followerHistory, mk)
     const mAvg = mPosts.length > 0 ? mImpTotal / mPosts.length : 0
-    return { month: mk, posts: mPosts.length, imp: mImpTotal, fol: mFol, avg: mAvg }
+    const mIcpOwn = icpForMonth(member.icpSignals, mk).length
+    const mIcpAttr = icpForMonth(orgIcpSignals, mk).filter(s => attributeOrgSignal(s, [member]) === member.name).length
+    return { month: mk, posts: mPosts.length, imp: mImpTotal, fol: mFol, avg: mAvg, icp: mIcpOwn + mIcpAttr }
   })
+
+  const showIcpCol = monthData.some(d => d.icp > 0)
+  const monthHead = ['Month', 'Posts', 'Impressions', 'Avg/Post', 'Followers']
+  if (showIcpCol) monthHead.push('ICP')
 
   if (monthData.length > 0) {
     autoTable(doc, {
       startY: monthTableY,
-      head: [['Month', 'Posts', 'Impressions', 'Avg/Post', 'Followers']],
-      body: monthData.map(d => [
-        monthLabel(d.month),
-        d.posts.toString(),
-        fmtN(d.imp),
-        d.posts > 0 ? fmtN(d.avg) : '–',
-        d.fol > 0 ? `+${fmtN(d.fol)}` : '–',
-      ]),
+      head: [monthHead],
+      body: monthData.map(d => {
+        const row = [
+          monthLabel(d.month),
+          d.posts.toString(),
+          fmtN(d.imp),
+          d.posts > 0 ? fmtN(d.avg) : '–',
+          d.fol > 0 ? `+${fmtN(d.fol)}` : '–',
+        ]
+        if (showIcpCol) row.push(d.icp > 0 ? d.icp.toString() : '–')
+        return row
+      }),
       headStyles: { fillColor: BRAND, textColor: WHITE, fontSize: 7, fontStyle: 'bold', cellPadding: 2.5 },
       bodyStyles: { fontSize: 7.5, textColor: MID, cellPadding: 2.5 },
       alternateRowStyles: { fillColor: BG },
@@ -602,7 +618,11 @@ function buildMemberPage(
       { label: 'Posts', current: postsForMonth(member.posts, latestMonth).length, goal: goals.monthlyPosts },
       { label: 'Impressions', current: postsForMonth(member.posts, latestMonth).reduce((s, p) => s + p.impressions, 0), goal: goals.monthlyImpressions },
       { label: 'Followers', current: followerGrowthForMonth(member.posts, member.followerHistory, latestMonth), goal: goals.monthlyFollowers },
-      { label: 'ICP Signals', current: icpForMonth(member.icpSignals, latestMonth).length + icpForMonth(orgIcpSignals, latestMonth).filter(s => attributeOrgSignal(s, [member]) === member.name).length, goal: goals.monthlyIcpSignals },
+      { label: 'ICP Signals', current: (() => {
+        const own = icpForMonth(member.icpSignals, latestMonth).length
+        const attr = icpForMonth(orgIcpSignals, latestMonth).filter(s => attributeOrgSignal(s, [member]) === member.name).length
+        return own + attr
+      })(), goal: goals.monthlyIcpSignals },
     ]
 
     for (const g of goalItems) {
@@ -649,6 +669,9 @@ function buildMemberPage(
     }
 
     if (icpTotal > 0) {
+      const allMemberIcp = [...mIcp, ...attOrg]
+      const companies = new Set(allMemberIcp.map(s => s.company).filter(Boolean))
+      insights.push(`${icpTotal} ICP signals total — ${companies.size} companies reached.`)
       const confirmed = mIcp.filter(s => s.isIcp).length
       if (confirmed > 0) insights.push(`${confirmed} confirmed ICP match${confirmed > 1 ? 'es' : ''} — real pipeline opportunities.`)
     }
