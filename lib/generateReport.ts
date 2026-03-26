@@ -37,8 +37,8 @@ export interface ReportData {
 // ─── Brand ──────────────────────────────────────────────────────────────────
 
 const BRAND: [number, number, number] = [114, 47, 55]
-const DARK: [number, number, number] = [45, 45, 45]
-const MID: [number, number, number] = [74, 74, 74]
+const DARK: [number, number, number] = [68, 64, 60]
+const MID: [number, number, number] = [107, 107, 107]
 const GRAY: [number, number, number] = [150, 150, 150]
 const RULE: [number, number, number] = [232, 236, 240]
 const BG: [number, number, number] = [250, 248, 243]
@@ -194,9 +194,11 @@ const PH = 210
 // ─── Drawing primitives ─────────────────────────────────────────────────────
 
 function kpiBlock(doc: jsPDF, x: number, y: number, w: number, h: number, label: string, value: string, sub: string) {
-  // Subtle background
+  // Card with subtle border
   doc.setFillColor(...BG)
-  doc.roundedRect(x, y, w, h, 2, 2, 'F')
+  doc.setDrawColor(...RULE)
+  doc.setLineWidth(0.3)
+  doc.roundedRect(x, y, w, h, 2, 2, 'FD')
 
   // Label
   doc.setFont('helvetica', 'normal')
@@ -270,8 +272,14 @@ async function buildPage1(
   kpiBlock(doc, 14 + (kpiW + gap) * 2, kpiY, kpiW, kpiH, 'Follower Growth', `+${fmtN(totFol)}`, `${period}`)
   kpiBlock(doc, 14 + (kpiW + gap) * 3, kpiY, kpiW, kpiH, 'ICP Signals', fmtN(totIcp), unattr > 0 ? `incl. ${unattr} unattributed` : 'All sources')
 
+  // ── Divider ──
+  const divY1 = kpiY + kpiH + 5
+  doc.setDrawColor(...RULE)
+  doc.setLineWidth(0.3)
+  doc.line(14, divY1, PW - 14, divY1)
+
   // ── Content Leaderboard ──
-  const tableY = kpiY + kpiH + 8
+  const tableY = divY1 + 5
   sectionLabel(doc, 14, tableY, 'Content Leaderboard')
 
   const head = ['#', 'Name', 'Role', 'Posts', 'Impressions', 'Avg/Post', 'Followers', 'Eng. Rate']
@@ -303,16 +311,16 @@ async function buildPage1(
       cellPadding: { top: 3, bottom: 3, left: 4, right: 4 },
     },
     bodyStyles: {
-      fontSize: 8, textColor: DARK,
+      fontSize: 8, textColor: MID,
       cellPadding: { top: 4, bottom: 4, left: 4, right: 4 },
     },
     alternateRowStyles: { fillColor: BG },
     columnStyles: {
-      0: { cellWidth: 8, halign: 'center', fontStyle: 'bold' },
-      1: { cellWidth: 36, fontStyle: 'bold' },
+      0: { cellWidth: 12, halign: 'center', textColor: GRAY },
+      1: { cellWidth: 36, fontStyle: 'bold', textColor: DARK },
       2: { cellWidth: 22, textColor: GRAY },
     },
-    styles: { lineWidth: 0, overflow: 'ellipsize' },
+    styles: { lineWidth: 0 },
     margin: { left: 14, right: 14 },
   })
 
@@ -325,15 +333,20 @@ async function buildPage1(
   doc.text(`notus benchmark (50K posts)   Top 10% = ${fmtN(BENCHMARKS.top10PerPost)}/post  ·  Top 25% = ${fmtN(BENCHMARKS.top25PerPost)}/post  ·  Top 50% = ${fmtN(BENCHMARKS.medianPerPost)}/post`, 14, y)
   y += 7
 
-  // ── Trend (compact, latest first) ──
+  // ── Divider + Trend (compact, latest first) ──
   if (trendReversed.length > 1) {
+    doc.setDrawColor(...RULE)
+    doc.setLineWidth(0.3)
+    doc.line(14, y, PW - 14, y)
+    y += 5
+
     sectionLabel(doc, 14, y, 'Impressions by Month')
-    y += 4
+    y += 5
 
     const maxVal = Math.max(...trendReversed.map(d => d.imp))
-    const barMax = PW - 100
-    const barH = 5
-    const rowH = barH + 2.5
+    const barMax = PW - 105
+    const barH = 6
+    const rowH = barH + 3
 
     // Only show as many as fit
     const available = PH - y - 12
@@ -343,17 +356,17 @@ async function buildPage1(
     for (const pt of shown) {
       const bw = maxVal > 0 ? (pt.imp / maxVal) * barMax : 0
       doc.setFont('helvetica', 'normal')
-      doc.setFontSize(7)
+      doc.setFontSize(8)
       doc.setTextColor(...MID)
-      doc.text(monthLabel(pt.date), 14, y + 3.8)
+      doc.text(monthLabel(pt.date), 14, y + 4.5)
       if (bw > 0.5) {
         doc.setFillColor(...BRAND)
-        doc.roundedRect(44, y, bw, barH, 1.2, 1.2, 'F')
+        doc.roundedRect(48, y, bw, barH, 1.5, 1.5, 'F')
       }
       doc.setFont('helvetica', 'bold')
-      doc.setFontSize(7)
+      doc.setFontSize(8.5)
       doc.setTextColor(...DARK)
-      doc.text(fmtN(pt.imp), 44 + bw + 3, y + 3.8)
+      doc.text(fmtN(pt.imp), 48 + bw + 3, y + 4.5)
       y += rowH
     }
   }
@@ -409,7 +422,7 @@ function buildPage2(
     head: [['Company', 'Signals']],
     body: topComp.slice(0, 8).map(([c, n]) => [c, n.toString()]),
     headStyles: { fillColor: BRAND, textColor: WHITE, fontSize: 7, fontStyle: 'bold', cellPadding: 2.5 },
-    bodyStyles: { fontSize: 7.5, textColor: DARK, cellPadding: 2.5 },
+    bodyStyles: { fontSize: 7.5, textColor: MID, cellPadding: 2.5 },
     alternateRowStyles: { fillColor: BG },
     styles: { lineWidth: 0 },
     margin: { left: 14, right: PW - 14 - halfW },
@@ -424,7 +437,7 @@ function buildPage2(
     head: [['Member', 'Signals', 'Companies']],
     body: icpRows.map(r => [r.name, r.total.toString(), r.comps.toString()]),
     headStyles: { fillColor: BRAND, textColor: WHITE, fontSize: 7, fontStyle: 'bold', cellPadding: 2.5 },
-    bodyStyles: { fontSize: 7.5, textColor: DARK, cellPadding: 2.5 },
+    bodyStyles: { fontSize: 7.5, textColor: MID, cellPadding: 2.5 },
     alternateRowStyles: { fillColor: BG },
     styles: { lineWidth: 0 },
     margin: { left: 14 + halfW + 8, right: 14 },
@@ -532,7 +545,13 @@ function buildMemberPage(
   if (hasIcp) {
     kpiBlock(doc, 14 + (kpiW + gap) * 3, y, kpiW, kpiH, 'ICP Signals', icpTotal.toString(), mIcp.filter(s => s.isIcp).length > 0 ? `${mIcp.filter(s => s.isIcp).length} confirmed ICP` : 'All signals')
   }
-  y += kpiH + 8
+  y += kpiH + 4
+
+  // Divider
+  doc.setDrawColor(...RULE)
+  doc.setLineWidth(0.3)
+  doc.line(14, y, PW - 14, y)
+  y += 5
 
   // ── Monthly breakdown (left side) + Goals (right side) ──
   const colW = (PW - 28 - 8) / 2
@@ -562,7 +581,7 @@ function buildMemberPage(
         d.fol > 0 ? `+${fmtN(d.fol)}` : '–',
       ]),
       headStyles: { fillColor: BRAND, textColor: WHITE, fontSize: 7, fontStyle: 'bold', cellPadding: 2.5 },
-      bodyStyles: { fontSize: 7.5, textColor: DARK, cellPadding: 2.5 },
+      bodyStyles: { fontSize: 7.5, textColor: MID, cellPadding: 2.5 },
       alternateRowStyles: { fillColor: BG },
       styles: { lineWidth: 0 },
       margin: { left: 14, right: PW - 14 - colW },
