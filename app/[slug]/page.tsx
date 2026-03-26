@@ -1754,11 +1754,11 @@ function MemberView({ member, goals, onGoalsChange }: {
       {mp.length > 0 && (
         <div className="bg-white border border-[#E8ECF0] rounded-xl p-5">
           <p className="text-[10px] font-semibold uppercase tracking-widest text-[#6B6B6B] mb-4">Post Impressions — {monthLabel(selectedMonth)}</p>
-          {mp.length <= 4 ? (
-            <div className="space-y-3">
-              {chartData.map(p => {
-                const max = Math.max(...chartData.map(d => d.impressions), 1)
-                return (
+          {(() => {
+            const max = Math.max(...chartData.map(d => d.impressions), 1)
+            return (
+              <div className="space-y-3">
+                {chartData.map(p => (
                   <div key={p.i}>
                     <div className="flex items-center justify-between mb-1">
                       <span className="text-xs text-[#4A4A4A]">Post {p.i}</span>
@@ -1771,24 +1771,13 @@ function MemberView({ member, goals, onGoalsChange }: {
                       )}
                     </div>
                   </div>
-                )
-              })}
-              <div className="flex items-center gap-4 pt-1">
-                <span className="flex items-center gap-1.5 text-[10px] text-[#A8A29E]"><span className="w-2 h-px bg-green-500 inline-block" /> Top 25%: {fmtN(BENCHMARKS.top25PerPost)}</span>
+                ))}
+                <div className="flex items-center gap-4 pt-1">
+                  <span className="flex items-center gap-1.5 text-[10px] text-[#A8A29E]"><span className="w-2 h-px bg-green-500 inline-block" /> Top 25%: {fmtN(BENCHMARKS.top25PerPost)}</span>
+                </div>
               </div>
-            </div>
-          ) : (
-            <ResponsiveContainer width="100%" height={160}>
-              <BarChart data={chartData} barSize={Math.min(32, Math.max(12, 300 / chartData.length))}>
-                <XAxis dataKey="i" tick={{ fontSize: 10, fill: '#A8A29E' }} axisLine={false} tickLine={false} label={{ value: 'Post #', position: 'insideBottom', offset: -2, fontSize: 10, fill: '#A8A29E' }} />
-                <YAxis tick={{ fontSize: 10, fill: '#A8A29E' }} axisLine={false} tickLine={false} tickFormatter={fmtN} width={36} />
-                <Tooltip formatter={(v: number) => [fmtN(v), 'Impressions']} contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid #E8ECF0' }} />
-                <ReferenceLine y={BENCHMARKS.top25PerPost} stroke="#16A34A" strokeDasharray="3 3" strokeWidth={1} />
-                <ReferenceLine y={BENCHMARKS.top10PerPost} stroke={BRAND} strokeDasharray="3 3" strokeWidth={1} />
-                <Bar dataKey="impressions" fill={BRAND} radius={[3, 3, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          )}
+            )
+          })()}
         </div>
       )}
 
