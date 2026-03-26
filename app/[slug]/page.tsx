@@ -1923,37 +1923,30 @@ function MemberView({ member, goals, onGoalsChange }: {
         return (
           <div>
             <p className="text-[10px] font-semibold uppercase tracking-widest text-[#6B6B6B] mb-3">Top Posts</p>
-            <div className="space-y-3">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               {topPosts.map((post, idx) => {
                 const postTier = tier(post.impressions)
                 return (
-                  <div key={idx} className="bg-white border border-[#E8ECF0] rounded-xl p-5">
-                    <div className="flex items-start justify-between mb-3">
-                      <span className="text-2xl font-bold" style={{ color: BRAND_LIGHT }}>#{idx + 1}</span>
+                  <div key={idx} className="bg-white border border-[#E8ECF0] rounded-xl p-4">
+                    <div className="flex items-start justify-between mb-2">
+                      <span className="text-lg font-bold" style={{ color: BRAND_LIGHT }}>#{idx + 1}</span>
                       <div className="text-right">
-                        <span className="text-xl font-bold text-[#2D2D2D]">{fmtN(post.impressions)}</span>
-                        <p className="text-[10px] uppercase tracking-widest text-[#6B6B6B]">Impressions</p>
+                        <span className="text-lg font-bold text-[#2D2D2D]">{fmtN(post.impressions)}</span>
+                        <p className="text-[9px] uppercase tracking-widest text-[#6B6B6B]">Impressions</p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2 mb-3">
-                      <span className="text-xs text-[#6B6B6B]">{post.date}</span>
-                      <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full" style={{
-                        backgroundColor: postTier.label.includes('10') ? BRAND_LIGHT : postTier.label.includes('25') ? '#F0FDF4' : '#FEF9F0',
-                        color: postTier.label.includes('10') ? BRAND : postTier.label.includes('25') ? '#16A34A' : '#D97706',
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-[11px] text-[#6B6B6B]">{post.date}</span>
+                      <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded-full" style={{
+                        backgroundColor: postTier.bg, color: postTier.color,
                       }}>{postTier.label}</span>
                     </div>
-                    <div className="border-t border-[#EEF1F5] pt-3 flex items-center justify-between">
-                      <div className="flex items-center gap-6">
-                        {post.engagements > 0 && (
-                          <div><span className="font-semibold text-sm text-[#2D2D2D]">{post.engagements}</span><span className="text-[10px] uppercase tracking-widest text-[#6B6B6B] ml-1.5">Engagements</span></div>
-                        )}
-                        {post.engagementRate > 0 && (
-                          <div><span className="font-semibold text-sm text-[#2D2D2D]">{fmtPct(post.engagementRate)}</span><span className="text-[10px] uppercase tracking-widest text-[#6B6B6B] ml-1.5">ER</span></div>
-                        )}
+                    <div className="border-t border-[#EEF1F5] pt-2 flex items-center justify-between">
+                      <div className="flex items-center gap-4 text-xs">
+                        {post.engagements > 0 && <span><span className="font-semibold text-[#2D2D2D]">{post.engagements}</span> <span className="text-[#6B6B6B]">eng</span></span>}
+                        {post.engagementRate > 0 && <span><span className="font-semibold text-[#2D2D2D]">{fmtPct(post.engagementRate)}</span> <span className="text-[#6B6B6B]">ER</span></span>}
                       </div>
-                      {post.url && (
-                        <a href={post.url} target="_blank" rel="noopener noreferrer" className="text-xs hover:underline" style={{ color: BRAND }}>View ↗</a>
-                      )}
+                      {post.url && <a href={post.url} target="_blank" rel="noopener noreferrer" className="text-xs hover:underline" style={{ color: BRAND }}>↗</a>}
                     </div>
                   </div>
                 )
