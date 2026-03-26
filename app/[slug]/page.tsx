@@ -1105,7 +1105,7 @@ function ICPOverview({ members, orgIcpSignals }: { members: Member[]; orgIcpSign
 
   return (
     <div className="space-y-4 pt-5 border-t border-[#EEF1F5]">
-      <p className="text-sm font-semibold uppercase tracking-widest text-[#6B6B6B]">ICP Overview — All Time</p>
+      <h2 className="text-lg font-semibold text-[#2D2D2D]">ICP Overview — All Time</h2>
       <div className="grid grid-cols-2 gap-4">
         <StatCard label="Total ICP Signals" value={fmtN(total)} sub="All sources combined" />
         <StatCard label="Top Company" value={topCompany ?? '—'} sub={topCompany ? `${companyCounts[0][1]} signals` : 'No company data'} />
