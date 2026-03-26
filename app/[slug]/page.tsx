@@ -1777,16 +1777,6 @@ function MemberView({ member, goals, onGoalsChange }: {
   const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()
   const pace = isCurrentMonth ? { day: now.getDate(), daysInMonth } : undefined
 
-  const insights: string[] = []
-  if (avgPerPost >= BENCHMARKS.top10PerPost) insights.push(`Impressions per post (${fmtN(avgPerPost)}) is in the top 10% of all creators tracked by notus.`)
-  else if (avgPerPost >= BENCHMARKS.top25PerPost) insights.push(`Impressions per post (${fmtN(avgPerPost)}) beats the top 25% benchmark of ${fmtN(BENCHMARKS.top25PerPost)}.`)
-  else if (avgPerPost > 0) insights.push(`Impressions per post (${fmtN(avgPerPost)}) is below the top 25% threshold (${fmtN(BENCHMARKS.top25PerPost)}). Stronger hooks and more consistent posting can help.`)
-  if (topPost && avgPerPost > 0 && topPost.impressions > avgPerPost * 1.5)
-    insights.push(`Top post performed ${(topPost.impressions / avgPerPost).toFixed(1)}x above your monthly average — worth replicating the format.`)
-  if (mf >= BENCHMARKS.top25MonthlyFollowers) insights.push(`Follower growth of +${fmtN(mf)} exceeds the top 25% benchmark of +${BENCHMARKS.top25MonthlyFollowers}/month.`)
-  if (avgEngRate >= BENCHMARKS.top25EngRate) insights.push(`Engagement rate of ${fmtPct(avgEngRate)} is above benchmark (${BENCHMARKS.top25EngRate}%) — your audience is actively responding.`)
-  if (icpMatched > 0) insights.push(`${icpMatched} confirmed ICP signal${icpMatched > 1 ? 's' : ''} this month — these are real pipeline opportunities worth following up.`)
-
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between flex-wrap gap-3">
@@ -1986,20 +1976,6 @@ function MemberView({ member, goals, onGoalsChange }: {
           </div>
         )
       })()}
-
-      {insights.length > 0 && (
-        <div className="bg-white border border-[#E8ECF0] rounded-xl p-5">
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-[#6B6B6B] mb-3">Insights</p>
-          <div className="space-y-2.5">
-            {insights.map((ins, i) => (
-              <div key={i} className="flex items-start gap-2.5">
-                <Zap className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" style={{ color: BRAND }} />
-                <p className="text-sm text-[#2D2D2D] leading-relaxed">{ins}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
 
       {hasIcp && icpMonth.length > 0 && (
         <ICPSignalTable signals={icpMonth} monthLabel={monthLabel(selectedMonth)} />
