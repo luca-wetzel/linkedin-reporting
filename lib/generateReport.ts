@@ -1,7 +1,7 @@
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 
-// ─── Types (duplicated from page.tsx — pure data, no React) ─────────────────
+// ─── Types ──────────────────────────────────────────────────────────────────
 
 interface Post {
   date: string; url?: string; impressions: number; clicks: number
@@ -28,31 +28,33 @@ interface MemberGoals {
 
 export interface ReportData {
   orgName: string
-  selectedMonth: string // 'all' or 'YYYY-MM'
+  selectedMonth: string
   members: Member[]
   orgIcpSignals: ICPSignal[]
   goals: Record<string, MemberGoals>
 }
 
-// ─── Constants ──────────────────────────────────────────────────────────────
+// ─── Brand ──────────────────────────────────────────────────────────────────
 
 const BRAND: [number, number, number] = [114, 47, 55]
-const BRAND_LIGHT: [number, number, number] = [244, 236, 237]
 const DARK: [number, number, number] = [45, 45, 45]
-const GRAY: [number, number, number] = [107, 107, 107]
-const LIGHT_GRAY: [number, number, number] = [212, 212, 212]
+const MID: [number, number, number] = [74, 74, 74]
+const GRAY: [number, number, number] = [150, 150, 150]
+const RULE: [number, number, number] = [232, 236, 240]
 const BG: [number, number, number] = [250, 248, 243]
 const WHITE: [number, number, number] = [255, 255, 255]
 
 const BENCHMARKS = {
-  top10PerPost: 2500,
-  top25PerPost: 800,
-  medianPerPost: 300,
-  top25EngRate: 3.5,
-  top25MonthlyFollowers: 150,
+  top10PerPost: 2500, top25PerPost: 800, medianPerPost: 300,
+  top25EngRate: 3.5, top25MonthlyFollowers: 150,
 }
 
-// ─── Helpers (duplicated from page.tsx) ─────────────────────────────────────
+// SVGs (embedded as strings, rendered to PNG via canvas at runtime)
+const LOGO_SVG = `<svg width="413" height="109" viewBox="0 0 413 109" fill="none" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" clip-rule="evenodd" d="M211.623 0C211.623 12.7593 204.332 25.5186 185.11 25.5186V30.9869H198.366V89.8122C198.366 103.731 204.332 108.371 221.897 108.371C227.696 108.371 231.673 107.874 236.479 106.383V100.914C230.679 102.571 227.696 102.903 225.211 102.903C219.577 102.903 217.091 99.9202 217.091 93.292V30.9869H249.871V80.0356C249.871 99.0917 258.488 108.371 276.55 108.371C292.126 108.371 301.074 101.246 310.022 92.4635L312.508 106.714H339.186V101.246H328.416V25.5186H298.92V30.9869H309.691V80.0356C309.691 84.841 308.697 86.6638 305.051 90.475C297.097 98.926 289.641 102.903 282.515 102.903C273.401 102.903 268.596 96.4404 268.596 82.5212V25.5186H217.091V0H211.623ZM89.3188 52.2086V101.259H100.09V106.728H59.822V101.259H70.5933V49.5572C70.5933 36.6317 66.782 29.3404 56.5078 29.3404C48.5536 29.3404 41.2623 33.8146 33.971 41.7688C30.8224 45.2487 29.331 47.9001 29.331 52.2086L29.4967 101.259H40.268V106.728H0V101.259H10.7713V30.9975H0V25.529H26.6796L29.1653 39.6145C37.4509 31.9918 46.5651 23.8719 64.7934 23.8719C78.0504 23.8719 89.3188 28.1804 89.3188 52.2086ZM102.077 66.1284C102.077 39.4488 115.169 23.8719 143.671 23.8719C172.008 23.8719 185.099 39.4488 185.099 66.1284C185.099 92.8081 172.008 108.385 143.671 108.385C115.169 108.385 102.077 92.8081 102.077 66.1284ZM166.374 66.1284C166.374 42.7631 157.757 29.0089 143.671 29.0089C129.42 29.0089 120.803 42.7631 120.803 66.1284C120.803 89.4938 129.42 103.082 143.671 103.082C157.757 103.082 166.374 89.4938 166.374 66.1284ZM359.622 41.6031C359.622 34.6432 366.251 29.3404 377.354 29.3404C385.805 29.3404 395.251 32.3232 402.045 45.7459H407.513V25.529H402.045L399.062 30.9975C393.096 25.8604 385.308 23.8719 377.022 23.8719C360.617 23.8719 346.863 31.9918 346.863 48.2315C346.863 65.63 362.255 69.8349 375.939 73.5728C386.887 76.5637 396.742 79.2557 396.742 88.1682C396.742 96.1223 389.119 102.917 377.519 102.917C368.902 102.917 359.954 99.1051 351.668 83.5282H346.2V106.728H351.668L355.148 99.1051C361.777 105.568 369.068 108.385 379.342 108.385C398.399 108.385 412.816 98.7737 412.816 82.2025C412.909 64.2488 396.135 59.8202 381.402 55.9303C369.889 52.8908 359.622 50.1802 359.622 41.6031Z" fill="FILLCOLOR"/></svg>`
+
+const ICON_SVG = `<svg width="79" height="79" viewBox="0 0 79 79" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="78.4551" height="78.4551" rx="6.07214" fill="#6D2931"/><path fill-rule="evenodd" clip-rule="evenodd" d="M49.8051 35.7031V48.9155H52.7065V50.3885H41.8598V48.9155H44.7612V34.9889C44.7612 31.5073 43.7346 29.5433 40.9671 29.5433C38.8246 29.5433 36.8605 30.7485 34.8966 32.891C34.0485 33.8284 33.6467 34.5426 33.6467 35.7031L33.6914 48.9155H36.5927V50.3885H25.7461V48.9155H28.6475V29.9897H25.7461V28.5167H32.9325L33.6021 32.3108C35.8339 30.2575 38.2889 28.0703 43.1989 28.0703C46.7698 28.0703 49.8051 29.2309 49.8051 35.7031Z" fill="white"/></svg>`
+
+// ─── Helpers ────────────────────────────────────────────────────────────────
 
 function fmtN(n: number): string {
   if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + 'M'
@@ -61,7 +63,7 @@ function fmtN(n: number): string {
   return Math.round(n).toString()
 }
 
-function fmtPct(n: number, decimals = 1): string { return n.toFixed(decimals) + '%' }
+function fmtPct(n: number, d = 1): string { return n.toFixed(d) + '%' }
 
 function parseFlexDate(s: string): Date | null {
   if (!s) return null
@@ -81,18 +83,15 @@ function monthKey(d: Date): string {
 
 function monthLabel(key: string): string {
   const [y, m] = key.split('-')
-  const names = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-  return `${names[parseInt(m) - 1]} ${y}`
+  return ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][parseInt(m) - 1] + ' ' + y
 }
 
 function postsForMonth(posts: Post[], mk: string): Post[] {
   return posts.filter(p => { const d = parseFlexDate(p.date); return d ? monthKey(d) === mk : false })
 }
 
-function followerGrowthForMonth(posts: Post[], followerHistory: FollowerEntry[], mk: string): number {
-  if (followerHistory.length > 0) {
-    return followerHistory.filter(f => { const d = parseFlexDate(f.date); return d ? monthKey(d) === mk : false }).reduce((s, f) => s + f.newFollowers, 0)
-  }
+function followerGrowthForMonth(posts: Post[], fh: FollowerEntry[], mk: string): number {
+  if (fh.length > 0) return fh.filter(f => { const d = parseFlexDate(f.date); return d ? monthKey(d) === mk : false }).reduce((s, f) => s + f.newFollowers, 0)
   return postsForMonth(posts, mk).reduce((s, p) => s + p.follows, 0)
 }
 
@@ -113,503 +112,368 @@ function attributeOrgSignal(signal: ICPSignal, members: Member[]): string | unde
   return undefined
 }
 
-function tier(avgPerPost: number): { label: string } {
-  if (avgPerPost >= BENCHMARKS.top10PerPost) return { label: 'Top 10%' }
-  if (avgPerPost >= BENCHMARKS.top25PerPost) return { label: 'Top 25%' }
-  if (avgPerPost >= BENCHMARKS.medianPerPost) return { label: 'Top 50%' }
-  return { label: 'Below 50%' }
+function tier(avg: number): string {
+  if (avg >= BENCHMARKS.top10PerPost) return 'Top 10%'
+  if (avg >= BENCHMARKS.top25PerPost) return 'Top 25%'
+  if (avg >= BENCHMARKS.medianPerPost) return 'Top 50%'
+  return 'Below 50%'
+}
+
+// ─── SVG to image ───────────────────────────────────────────────────────────
+
+function svgToImage(svg: string, w: number, h: number): Promise<string> {
+  return new Promise((resolve) => {
+    const img = new Image()
+    const blob = new Blob([svg], { type: 'image/svg+xml' })
+    const url = URL.createObjectURL(blob)
+    img.onload = () => {
+      const c = document.createElement('canvas')
+      c.width = w * 3; c.height = h * 3
+      const ctx = c.getContext('2d')!
+      ctx.scale(3, 3)
+      ctx.drawImage(img, 0, 0, w, h)
+      URL.revokeObjectURL(url)
+      resolve(c.toDataURL('image/png'))
+    }
+    img.src = url
+  })
 }
 
 // ─── Data computation ───────────────────────────────────────────────────────
 
-function computeReportData(data: ReportData) {
+function compute(data: ReportData) {
   const { members, orgIcpSignals, selectedMonth } = data
-  const isAllTime = selectedMonth === 'all'
-
-  const orgIcpFiltered = isAllTime ? orgIcpSignals : icpForMonth(orgIcpSignals, selectedMonth)
+  const all = selectedMonth === 'all'
+  const orgIcpF = all ? orgIcpSignals : icpForMonth(orgIcpSignals, selectedMonth)
 
   const rows = members.map(m => {
-    const mp = isAllTime ? m.posts : postsForMonth(m.posts, selectedMonth)
-    const mf = isAllTime
-      ? m.followerHistory.reduce((s, f) => s + f.newFollowers, 0)
-      : followerGrowthForMonth(m.posts, m.followerHistory, selectedMonth)
-    const memberIcp = isAllTime ? m.icpSignals : icpForMonth(m.icpSignals, selectedMonth)
-    const attributedOrg = orgIcpFiltered.filter(s => attributeOrgSignal(s, [m]) === m.name)
-    const icpTotal = memberIcp.length + attributedOrg.length
-    const impressions = mp.reduce((s, p) => s + p.impressions, 0)
-    const avgPerPost = mp.length > 0 ? impressions / mp.length : 0
-    const avgEng = mp.length > 0 ? mp.reduce((s, p) => s + p.engagementRate, 0) / mp.length : 0
-    const t = tier(avgPerPost)
-    return { member: m, postCount: mp.length, impressions, avgPerPost, avgEng, followers: mf, tier: t, icpTotal }
-  }).sort((a, b) => b.impressions - a.impressions)
+    const mp = all ? m.posts : postsForMonth(m.posts, selectedMonth)
+    const mf = all ? m.followerHistory.reduce((s, f) => s + f.newFollowers, 0) : followerGrowthForMonth(m.posts, m.followerHistory, selectedMonth)
+    const mIcp = all ? m.icpSignals : icpForMonth(m.icpSignals, selectedMonth)
+    const aOrg = orgIcpF.filter(s => attributeOrgSignal(s, [m]) === m.name)
+    const imp = mp.reduce((s, p) => s + p.impressions, 0)
+    const avg = mp.length > 0 ? imp / mp.length : 0
+    const eng = mp.length > 0 ? mp.reduce((s, p) => s + p.engagementRate, 0) / mp.length : 0
+    return { m, posts: mp.length, imp, avg, eng, fol: mf, icp: mIcp.length + aOrg.length, tier: tier(avg) }
+  }).sort((a, b) => b.imp - a.imp)
 
-  const totalImpressions = rows.reduce((s, r) => s + r.impressions, 0)
-  const totalPosts = rows.reduce((s, r) => s + r.postCount, 0)
-  const totalFollowers = rows.reduce((s, r) => s + r.followers, 0)
-  const unattributedIcp = orgIcpFiltered.filter(s => !attributeOrgSignal(s, members)).length
-  const totalIcp = rows.reduce((s, r) => s + r.icpTotal, 0) + unattributedIcp
-  const teamAvgPerPost = totalPosts > 0 ? totalImpressions / totalPosts : 0
+  const totImp = rows.reduce((s, r) => s + r.imp, 0)
+  const totPosts = rows.reduce((s, r) => s + r.posts, 0)
+  const totFol = rows.reduce((s, r) => s + r.fol, 0)
+  const unattr = orgIcpF.filter(s => !attributeOrgSignal(s, members)).length
+  const totIcp = rows.reduce((s, r) => s + r.icp, 0) + unattr
 
-  // Impressions trend
+  // Trend (reversed: latest first)
   const byMonth: Record<string, number> = {}
-  members.forEach(m => m.posts.forEach(p => {
-    const d = parseFlexDate(p.date); if (!d) return
-    const mk = monthKey(d)
-    byMonth[mk] = (byMonth[mk] || 0) + p.impressions
-  }))
-  const sorted = Object.entries(byMonth).sort(([a], [b]) => a.localeCompare(b))
-  const startIdx = sorted.findIndex(([, v]) => v >= 500)
-  const impressionsTrend = sorted.slice(startIdx >= 0 ? startIdx : 0).filter(([, v]) => v > 0).map(([date, impressions]) => ({ date, impressions }))
+  members.forEach(m => m.posts.forEach(p => { const d = parseFlexDate(p.date); if (d) { const mk = monthKey(d); byMonth[mk] = (byMonth[mk] || 0) + p.impressions } }))
+  const trend = Object.entries(byMonth).sort(([a], [b]) => a.localeCompare(b)).filter(([, v]) => v >= 500).map(([date, imp]) => ({ date, imp }))
+  const trendReversed = [...trend].reverse()
 
-  // ICP data
-  const allIcpSignals = [
-    ...orgIcpSignals.map(s => ({ ...s, via: attributeOrgSignal(s, members) })),
-    ...members.flatMap(m => m.icpSignals.map(s => ({ ...s, via: m.name }))),
-  ]
-  const companyCounts: Record<string, number> = {}
-  allIcpSignals.forEach(s => { if (s.company) companyCounts[s.company] = (companyCounts[s.company] || 0) + 1 })
-  const topCompanies = Object.entries(companyCounts).sort((a, b) => b[1] - a[1])
+  // ICP
+  const compMap: Record<string, number> = {}
+  const allSigs = [...orgIcpSignals, ...members.flatMap(m => m.icpSignals)]
+  allSigs.forEach(s => { if (s.company) compMap[s.company] = (compMap[s.company] || 0) + 1 })
+  const topComp = Object.entries(compMap).sort((a, b) => b[1] - a[1])
 
   const icpRows = members.map(m => {
-    const memberSignals = m.icpSignals.length
-    const attributedOrg = orgIcpSignals.filter(s => attributeOrgSignal(s, [m]) === m.name).length
-    const companies = new Set([
-      ...m.icpSignals.map(s => s.company).filter(Boolean),
-      ...orgIcpSignals.filter(s => attributeOrgSignal(s, [m]) === m.name).map(s => s.company).filter(Boolean),
-    ])
-    return { member: m, total: memberSignals + attributedOrg, companies: companies.size }
+    const own = m.icpSignals.length
+    const att = orgIcpSignals.filter(s => attributeOrgSignal(s, [m]) === m.name).length
+    const comps = new Set([...m.icpSignals.map(s => s.company).filter(Boolean), ...orgIcpSignals.filter(s => attributeOrgSignal(s, [m]) === m.name).map(s => s.company).filter(Boolean)])
+    return { name: m.name, role: m.role, total: own + att, comps: comps.size }
   }).filter(r => r.total > 0).sort((a, b) => b.total - a.total)
 
-  const periodLabel = isAllTime ? 'All Time' : monthLabel(selectedMonth)
-
-  return {
-    rows, totalImpressions, totalPosts, totalFollowers, totalIcp, teamAvgPerPost,
-    unattributedIcp, impressionsTrend, allIcpSignals, topCompanies, icpRows, periodLabel,
-  }
+  const period = all ? 'All Time' : monthLabel(selectedMonth)
+  return { rows, totImp, totPosts, totFol, totIcp, unattr, trend, trendReversed, topComp, icpRows, period }
 }
 
-// ─── PDF Drawing helpers ────────────────────────────────────────────────────
+// ─── PDF constants ──────────────────────────────────────────────────────────
 
-const PW = 297 // A4 landscape width mm
-const PH = 210 // A4 landscape height mm
+const PW = 297
+const PH = 210
 
-function drawHeader(doc: jsPDF, orgName: string) {
-  doc.setFillColor(...BRAND)
-  doc.rect(0, 0, PW, 14, 'F')
-  doc.setFont('helvetica', 'bold')
-  doc.setFontSize(9)
-  doc.setTextColor(...WHITE)
-  doc.text('notus', 12, 9.5)
+// ─── Drawing primitives ─────────────────────────────────────────────────────
+
+function kpiBlock(doc: jsPDF, x: number, y: number, w: number, h: number, label: string, value: string, sub: string) {
+  // Subtle background
+  doc.setFillColor(...BG)
+  doc.roundedRect(x, y, w, h, 2, 2, 'F')
+
+  // Label
   doc.setFont('helvetica', 'normal')
-  doc.setFontSize(8)
-  doc.text(orgName, PW - 12, 9.5, { align: 'right' })
-}
-
-function drawFooter(doc: jsPDF, pageLabel: string) {
-  const y = PH - 8
-  doc.setDrawColor(...LIGHT_GRAY)
-  doc.line(12, y - 4, PW - 12, y - 4)
-  doc.setFont('helvetica', 'normal')
-  doc.setFontSize(7)
-  doc.setTextColor(...LIGHT_GRAY)
-  doc.text('by notus', 12, y)
-  doc.text(pageLabel, PW - 12, y, { align: 'right' })
-}
-
-function drawSectionTitle(doc: jsPDF, title: string, y: number): number {
-  doc.setFont('helvetica', 'bold')
-  doc.setFontSize(14)
-  doc.setTextColor(...DARK)
-  doc.text(title, 12, y)
-  return y + 8
-}
-
-function drawKpiBox(doc: jsPDF, x: number, y: number, w: number, label: string, value: string, sub: string) {
-  doc.setFillColor(...WHITE)
-  doc.setDrawColor(232, 236, 240)
-  doc.roundedRect(x, y, w, 32, 2, 2, 'FD')
-  doc.setFont('helvetica', 'bold')
-  doc.setFontSize(7)
+  doc.setFontSize(6.5)
   doc.setTextColor(...GRAY)
-  doc.text(label.toUpperCase(), x + 6, y + 9)
-  doc.setFont('helvetica', 'bold')
-  doc.setFontSize(20)
-  doc.setTextColor(...DARK)
-  doc.text(value, x + 6, y + 22)
-  doc.setFont('helvetica', 'normal')
-  doc.setFontSize(7)
-  doc.setTextColor(...GRAY)
-  doc.text(sub, x + 6, y + 29)
-}
+  doc.text(label.toUpperCase(), x + 5, y + 7)
 
-// ─── Page builders ──────────────────────────────────────────────────────────
-
-function buildCoverPage(doc: jsPDF, orgName: string, periodLabel: string) {
-  doc.setFillColor(...BRAND)
-  doc.rect(0, 0, PW, PH, 'F')
-
-  // notus wordmark
-  doc.setFont('helvetica', 'bold')
-  doc.setFontSize(42)
-  doc.setTextColor(...WHITE)
-  doc.text('notus', PW / 2, 70, { align: 'center' })
-
-  // Thin rule
-  doc.setDrawColor(255, 255, 255, 80)
-  doc.setLineWidth(0.3)
-  doc.line(PW / 2 - 40, 80, PW / 2 + 40, 80)
-
-  // Org name
+  // Value
   doc.setFont('helvetica', 'bold')
   doc.setFontSize(22)
-  doc.text(orgName, PW / 2, 96, { align: 'center' })
+  doc.setTextColor(...DARK)
+  doc.text(value, x + 5, y + 20)
 
-  // Subtitle
+  // Sub
   doc.setFont('helvetica', 'normal')
-  doc.setFontSize(13)
-  doc.setTextColor(255, 220, 220)
-  doc.text('LinkedIn Performance Report', PW / 2, 108, { align: 'center' })
-
-  // Period
-  doc.setFontSize(11)
-  doc.text(periodLabel, PW / 2, 118, { align: 'center' })
-
-  // Date at bottom
-  doc.setFontSize(8)
-  doc.setTextColor(255, 200, 200)
-  doc.text(`Generated ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}`, PW / 2, PH - 16, { align: 'center' })
+  doc.setFontSize(7)
+  doc.setTextColor(...GRAY)
+  doc.text(sub, x + 5, y + 26)
 }
 
-function buildExecutiveSummary(
-  doc: jsPDF, orgName: string, periodLabel: string,
-  totalImpressions: number, totalPosts: number, totalFollowers: number, totalIcp: number,
-  teamAvgPerPost: number, rows: ReturnType<typeof computeReportData>['rows'],
-  topCompanies: [string, number][], unattributedIcp: number,
-) {
-  drawHeader(doc, orgName)
-  let y = drawSectionTitle(doc, `Executive Summary — ${periodLabel}`, 26)
-
-  // KPI boxes
-  const boxW = (PW - 24 - 18) / 4 // 4 boxes with 6mm gaps
-  y += 2
-  drawKpiBox(doc, 12, y, boxW, 'Team Impressions', fmtN(totalImpressions), `${rows.length} members`)
-  drawKpiBox(doc, 12 + boxW + 6, y, boxW, 'Posts Published', totalPosts.toString(), `${fmtN(teamAvgPerPost)} avg/post`)
-  drawKpiBox(doc, 12 + (boxW + 6) * 2, y, boxW, 'Follower Growth', `+${fmtN(totalFollowers)}`, periodLabel)
-  drawKpiBox(doc, 12 + (boxW + 6) * 3, y, boxW, 'ICP Signals', fmtN(totalIcp), unattributedIcp > 0 ? `incl. ${unattributedIcp} unattributed` : 'All sources')
-
-  y += 44
-
-  // Insights
+function sectionLabel(doc: jsPDF, x: number, y: number, text: string) {
   doc.setFont('helvetica', 'bold')
-  doc.setFontSize(10)
-  doc.setTextColor(...DARK)
-  doc.text('Key Insights', 12, y)
-  y += 8
-
-  const insights: string[] = []
-  if (rows.length > 0) {
-    const top = rows[0]
-    insights.push(`${top.member.name} leads the team with ${fmtN(top.impressions)} impressions (${top.tier.label} creator).`)
-  }
-  const teamTier = tier(teamAvgPerPost)
-  if (totalPosts > 0) {
-    insights.push(`Team averages ${fmtN(teamAvgPerPost)} impressions per post, placing in the ${teamTier.label} bracket (notus benchmark: 50K posts).`)
-  }
-  const followerLeader = [...rows].sort((a, b) => b.followers - a.followers)[0]
-  if (followerLeader && followerLeader.followers > 0) {
-    insights.push(`${followerLeader.member.name} leads in follower growth with +${fmtN(followerLeader.followers)} new followers.`)
-  }
-  if (topCompanies.length > 0) {
-    insights.push(`${topCompanies[0][0]} is the most engaged ICP account with ${topCompanies[0][1]} signals.`)
-  }
-  if (rows.length > 1) {
-    const engLeader = [...rows].filter(r => r.postCount > 0).sort((a, b) => b.avgEng - a.avgEng)[0]
-    if (engLeader && engLeader.avgEng >= BENCHMARKS.top25EngRate) {
-      insights.push(`${engLeader.member.name} has a ${fmtPct(engLeader.avgEng)} engagement rate — above the top 25% benchmark (${BENCHMARKS.top25EngRate}%).`)
-    }
-  }
-
-  doc.setFont('helvetica', 'normal')
-  doc.setFontSize(9)
-  doc.setTextColor(...DARK)
-  for (const ins of insights) {
-    doc.setFillColor(...BRAND)
-    doc.circle(16, y - 1.2, 1, 'F')
-    doc.text(ins, 20, y, { maxWidth: PW - 40 })
-    y += 8
-  }
-
-  drawFooter(doc, '')
+  doc.setFontSize(8)
+  doc.setTextColor(...BRAND)
+  doc.text(text.toUpperCase(), x, y)
 }
 
-function buildLeaderboard(
-  doc: jsPDF, orgName: string, periodLabel: string,
-  rows: ReturnType<typeof computeReportData>['rows'],
+// ─── Page 1: Performance Overview ───────────────────────────────────────────
+
+async function buildPage1(
+  doc: jsPDF, orgName: string, period: string,
+  logoWhite: string, iconImg: string,
+  totImp: number, totPosts: number, totFol: number, totIcp: number,
+  unattr: number,
+  rows: ReturnType<typeof compute>['rows'],
+  trendReversed: { date: string; imp: number }[],
   hasIcp: boolean,
 ) {
-  drawHeader(doc, orgName)
-  drawSectionTitle(doc, `Content Leaderboard — ${periodLabel}`, 26)
+  // ── Top banner (brand color, 48mm tall) ──
+  doc.setFillColor(...BRAND)
+  doc.rect(0, 0, PW, 48, 'F')
+
+  // Logo (white) — top left
+  doc.addImage(logoWhite, 'PNG', 14, 10, 52, 14)
+
+  // Org name — large, right-aligned
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(28)
+  doc.setTextColor(...WHITE)
+  doc.text(orgName, PW - 14, 22, { align: 'right' })
+
+  // Subtitle line
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(10)
+  doc.setTextColor(255, 200, 200)
+  doc.text(`LinkedIn Performance Report  ·  ${period}`, PW - 14, 32, { align: 'right' })
+
+  // Date
+  doc.setFontSize(7.5)
+  doc.setTextColor(255, 180, 180)
+  doc.text(new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }), PW - 14, 40, { align: 'right' })
+
+  // ── KPI row ──
+  const kpiY = 54
+  const kpiH = 30
+  const gap = 5
+  const kpiW = (PW - 28 - gap * 3) / 4
+  const avgPost = totPosts > 0 ? fmtN(totImp / totPosts) : '—'
+  kpiBlock(doc, 14, kpiY, kpiW, kpiH, 'Impressions', fmtN(totImp), `${rows.length} members · ${avgPost}/post`)
+  kpiBlock(doc, 14 + kpiW + gap, kpiY, kpiW, kpiH, 'Posts', totPosts.toString(), `${period}`)
+  kpiBlock(doc, 14 + (kpiW + gap) * 2, kpiY, kpiW, kpiH, 'Follower Growth', `+${fmtN(totFol)}`, `${period}`)
+  kpiBlock(doc, 14 + (kpiW + gap) * 3, kpiY, kpiW, kpiH, 'ICP Signals', fmtN(totIcp), unattr > 0 ? `incl. ${unattr} unattributed` : 'All sources')
+
+  // ── Content Leaderboard ──
+  const tableY = kpiY + kpiH + 8
+  sectionLabel(doc, 14, tableY, 'Content Leaderboard')
 
   const head = ['#', 'Name', 'Role', 'Posts', 'Impressions', 'Avg/Post', 'Followers', 'Eng. Rate']
-  if (hasIcp) head.push('ICP Signals')
+  if (hasIcp) head.push('ICP')
   head.push('Tier')
 
   const body = rows.map((r, i) => {
     const row = [
       `${i + 1}`,
-      r.member.name,
-      r.member.role || '—',
-      r.postCount.toString(),
-      fmtN(r.impressions),
-      r.postCount > 0 ? fmtN(r.avgPerPost) : '—',
-      r.followers > 0 ? `+${fmtN(r.followers)}` : '—',
-      r.postCount > 0 ? fmtPct(r.avgEng) : '—',
+      r.m.name,
+      r.m.role || '–',
+      r.posts.toString(),
+      fmtN(r.imp),
+      r.posts > 0 ? fmtN(r.avg) : '–',
+      r.fol > 0 ? `+${fmtN(r.fol)}` : '–',
+      r.posts > 0 ? fmtPct(r.eng) : '–',
     ]
-    if (hasIcp) row.push(r.icpTotal > 0 ? r.icpTotal.toString() : '—')
-    row.push(r.postCount > 0 ? r.tier.label : '—')
+    if (hasIcp) row.push(r.icp > 0 ? r.icp.toString() : '–')
+    row.push(r.posts > 0 ? r.tier : '–')
     return row
   })
 
   autoTable(doc, {
-    startY: 34,
+    startY: tableY + 2,
     head: [head],
     body,
-    headStyles: { fillColor: BRAND, textColor: WHITE, fontSize: 7.5, fontStyle: 'bold', cellPadding: 3 },
-    bodyStyles: { fontSize: 8, textColor: DARK, cellPadding: 3 },
+    headStyles: {
+      fillColor: BRAND, textColor: WHITE, fontSize: 7, fontStyle: 'bold',
+      cellPadding: { top: 3, bottom: 3, left: 4, right: 4 },
+    },
+    bodyStyles: {
+      fontSize: 8, textColor: DARK,
+      cellPadding: { top: 4, bottom: 4, left: 4, right: 4 },
+    },
     alternateRowStyles: { fillColor: BG },
     columnStyles: {
-      0: { cellWidth: 10, halign: 'center' },
-      1: { cellWidth: 38 },
-      2: { cellWidth: 28 },
+      0: { cellWidth: 8, halign: 'center', fontStyle: 'bold' },
+      1: { cellWidth: 36, fontStyle: 'bold' },
+      2: { cellWidth: 22, textColor: GRAY },
     },
     styles: { lineWidth: 0, overflow: 'ellipsize' },
-    margin: { left: 12, right: 12 },
-    didDrawPage: () => {
-      drawHeader(doc, orgName)
-      drawFooter(doc, '')
-    },
+    margin: { left: 14, right: 14 },
   })
 
-  // Benchmark legend
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const finalY = (doc as any).lastAutoTable?.finalY ?? 160
-  const ly = finalY + 6
-  doc.setFontSize(7)
-  doc.setTextColor(...LIGHT_GRAY)
-  doc.text(`notus benchmark (50K posts)  ·  Top 10% = ${fmtN(BENCHMARKS.top10PerPost)}/post  ·  Top 25% = ${fmtN(BENCHMARKS.top25PerPost)}/post  ·  Top 50% = ${fmtN(BENCHMARKS.medianPerPost)}/post`, 12, ly)
+  let y = ((doc as any).lastAutoTable?.finalY ?? 140) + 3
 
-  drawFooter(doc, '')
-}
+  // Benchmark legend
+  doc.setFontSize(6.5)
+  doc.setTextColor(...GRAY)
+  doc.text(`notus benchmark (50K posts)   Top 10% = ${fmtN(BENCHMARKS.top10PerPost)}/post  ·  Top 25% = ${fmtN(BENCHMARKS.top25PerPost)}/post  ·  Top 50% = ${fmtN(BENCHMARKS.medianPerPost)}/post`, 14, y)
+  y += 7
 
-function buildImpressionsTrend(
-  doc: jsPDF, orgName: string,
-  impressionsTrend: { date: string; impressions: number }[],
-) {
-  drawHeader(doc, orgName)
-  let y = drawSectionTitle(doc, 'Impressions Trend', 26)
-  y += 4
+  // ── Trend (compact, latest first) ──
+  if (trendReversed.length > 1) {
+    sectionLabel(doc, 14, y, 'Impressions by Month')
+    y += 4
 
-  if (impressionsTrend.length === 0) {
-    doc.setFont('helvetica', 'normal')
-    doc.setFontSize(9)
-    doc.setTextColor(...GRAY)
-    doc.text('No trend data available.', 12, y)
-    drawFooter(doc, '')
-    return
-  }
+    const maxVal = Math.max(...trendReversed.map(d => d.imp))
+    const barMax = PW - 100
+    const barH = 5
+    const rowH = barH + 2.5
 
-  const maxVal = Math.max(...impressionsTrend.map(d => d.impressions))
-  const barMaxWidth = PW - 90 // leave room for labels
-  const barHeight = 7
-  const gap = 3
+    // Only show as many as fit
+    const available = PH - y - 12
+    const maxRows = Math.floor(available / rowH)
+    const shown = trendReversed.slice(0, Math.min(trendReversed.length, maxRows))
 
-  // Check if we need to split across multiple columns or keep it simple
-  const rowsPerPage = Math.floor((PH - y - 20) / (barHeight + gap))
-
-  for (let i = 0; i < impressionsTrend.length; i++) {
-    if (i > 0 && i % rowsPerPage === 0) {
-      // New page for overflow
-      doc.addPage()
-      drawHeader(doc, orgName)
-      y = 26
+    for (const pt of shown) {
+      const bw = maxVal > 0 ? (pt.imp / maxVal) * barMax : 0
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(7)
+      doc.setTextColor(...MID)
+      doc.text(monthLabel(pt.date), 14, y + 3.8)
+      if (bw > 0.5) {
+        doc.setFillColor(...BRAND)
+        doc.roundedRect(44, y, bw, barH, 1.2, 1.2, 'F')
+      }
+      doc.setFont('helvetica', 'bold')
+      doc.setFontSize(7)
+      doc.setTextColor(...DARK)
+      doc.text(fmtN(pt.imp), 44 + bw + 3, y + 3.8)
+      y += rowH
     }
-
-    const point = impressionsTrend[i]
-    const barWidth = maxVal > 0 ? (point.impressions / maxVal) * barMaxWidth : 0
-
-    // Month label
-    doc.setFont('helvetica', 'normal')
-    doc.setFontSize(8)
-    doc.setTextColor(...GRAY)
-    doc.text(monthLabel(point.date), 12, y + 5)
-
-    // Bar
-    doc.setFillColor(...BRAND)
-    if (barWidth > 1) {
-      doc.roundedRect(46, y, barWidth, barHeight, 1.5, 1.5, 'F')
-    }
-
-    // Value
-    doc.setFont('helvetica', 'bold')
-    doc.setFontSize(8)
-    doc.setTextColor(...DARK)
-    doc.text(fmtN(point.impressions), 46 + barWidth + 4, y + 5)
-
-    y += barHeight + gap
   }
 
-  // Growth summary
-  if (impressionsTrend.length >= 2) {
-    y += 6
-    const first = impressionsTrend[0]
-    const last = impressionsTrend[impressionsTrend.length - 1]
-    const growth = first.impressions > 0 ? ((last.impressions - first.impressions) / first.impressions) * 100 : 0
-    doc.setFont('helvetica', 'normal')
-    doc.setFontSize(8)
-    doc.setTextColor(...GRAY)
-    const direction = growth >= 0 ? '↑' : '↓'
-    doc.text(`${direction} ${Math.abs(growth).toFixed(0)}% overall growth from ${monthLabel(first.date)} to ${monthLabel(last.date)}`, 12, y)
-  }
-
-  drawFooter(doc, '')
-}
-
-function buildIcpPipeline(
-  doc: jsPDF, orgName: string,
-  totalIcp: number, topCompanies: [string, number][],
-  icpRows: { member: Member; total: number; companies: number }[],
-  unattributedIcp: number,
-) {
-  drawHeader(doc, orgName)
-  let y = drawSectionTitle(doc, 'ICP Pipeline — All Time', 26)
-
-  // Stats row
-  const boxW = (PW - 24 - 12) / 3
-  drawKpiBox(doc, 12, y, boxW, 'Total Signals', fmtN(totalIcp), 'All sources')
-  drawKpiBox(doc, 12 + boxW + 6, y, boxW, 'Companies Reached', topCompanies.length.toString(), topCompanies[0] ? `Top: ${topCompanies[0][0]}` : '—')
-  drawKpiBox(doc, 12 + (boxW + 6) * 2, y, boxW, 'Top Company', topCompanies[0]?.[0] ?? '—', topCompanies[0] ? `${topCompanies[0][1]} signals` : '—')
-  y += 42
-
-  // Top companies table
-  if (topCompanies.length > 0) {
-    doc.setFont('helvetica', 'bold')
-    doc.setFontSize(10)
-    doc.setTextColor(...DARK)
-    doc.text('Top Companies', 12, y)
-    y += 2
-
-    autoTable(doc, {
-      startY: y,
-      head: [['#', 'Company', 'Signals', '% of Total']],
-      body: topCompanies.slice(0, 10).map(([company, ct], i) => [
-        `${i + 1}`, company, ct.toString(), `${((ct / totalIcp) * 100).toFixed(1)}%`
-      ]),
-      headStyles: { fillColor: BRAND, textColor: WHITE, fontSize: 7.5, fontStyle: 'bold', cellPadding: 2.5 },
-      bodyStyles: { fontSize: 8, textColor: DARK, cellPadding: 2.5 },
-      alternateRowStyles: { fillColor: BG },
-      columnStyles: { 0: { cellWidth: 10, halign: 'center' } },
-      styles: { lineWidth: 0 },
-      margin: { left: 12, right: PW / 2 + 6 },
-      tableWidth: PW / 2 - 18,
-    })
-  }
-
-  // ICP leaderboard — right column or below
-  if (icpRows.length > 0) {
-    const icpStartY = y
-    autoTable(doc, {
-      startY: icpStartY,
-      head: [['#', 'Member', 'ICP Signals', 'Companies']],
-      body: icpRows.map((r, i) => [
-        `${i + 1}`, r.member.name, r.total.toString(), r.companies.toString()
-      ]),
-      headStyles: { fillColor: BRAND, textColor: WHITE, fontSize: 7.5, fontStyle: 'bold', cellPadding: 2.5 },
-      bodyStyles: { fontSize: 8, textColor: DARK, cellPadding: 2.5 },
-      alternateRowStyles: { fillColor: BG },
-      columnStyles: { 0: { cellWidth: 10, halign: 'center' } },
-      styles: { lineWidth: 0 },
-      margin: { left: PW / 2 + 6, right: 12 },
-      tableWidth: PW / 2 - 18,
-    })
-  }
-
-  if (unattributedIcp > 0) {
-    doc.setFont('helvetica', 'normal')
-    doc.setFontSize(7)
-    doc.setTextColor(...LIGHT_GRAY)
-    doc.text(`+ ${unattributedIcp} unattributed signal${unattributedIcp > 1 ? 's' : ''} (org-level, not matched to a member)`, 12, PH - 18)
-  }
-
-  drawFooter(doc, '')
-}
-
-function buildBackCover(doc: jsPDF) {
-  doc.setFillColor(...BRAND)
-  doc.rect(0, 0, PW, PH, 'F')
-
-  doc.setFont('helvetica', 'bold')
-  doc.setFontSize(32)
-  doc.setTextColor(...WHITE)
-  doc.text('notus', PW / 2, PH / 2 - 8, { align: 'center' })
-
+  // ── Footer ──
+  doc.setDrawColor(...RULE)
+  doc.line(14, PH - 10, PW - 14, PH - 10)
+  doc.addImage(iconImg, 'PNG', 14, PH - 8.5, 4.5, 4.5)
   doc.setFont('helvetica', 'normal')
-  doc.setFontSize(10)
-  doc.setTextColor(255, 220, 220)
-  doc.text('Generated by notus', PW / 2, PH / 2 + 6, { align: 'center' })
-
-  doc.setFontSize(8)
-  doc.setTextColor(255, 200, 200)
-  doc.text(new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }), PW / 2, PH / 2 + 14, { align: 'center' })
+  doc.setFontSize(6.5)
+  doc.setTextColor(...GRAY)
+  doc.text('notus', 20, PH - 5.2)
+  doc.text('1', PW - 14, PH - 5.2, { align: 'right' })
 }
 
-// ─── Main export ────────────────────────────────────────────────────────────
+// ─── Page 2: ICP Pipeline ───────────────────────────────────────────────────
+
+function buildPage2(
+  doc: jsPDF, orgName: string, iconImg: string,
+  totIcp: number, topComp: [string, number][], icpRows: { name: string; role: string; total: number; comps: number }[],
+  unattr: number, totalPages: number,
+) {
+  // Header bar
+  doc.setFillColor(...BRAND)
+  doc.rect(0, 0, PW, 14, 'F')
+  doc.addImage(iconImg, 'PNG', 10, 3, 8, 8)
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(9)
+  doc.setTextColor(...WHITE)
+  doc.text('notus', 20, 9.5)
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(8)
+  doc.text(orgName, PW - 14, 9.5, { align: 'right' })
+
+  let y = 24
+
+  // Section title
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(14)
+  doc.setTextColor(...DARK)
+  doc.text('ICP Pipeline', 14, y)
+  y += 8
+
+  // KPI row
+  const kpiW = (PW - 28 - 10) / 3
+  kpiBlock(doc, 14, y, kpiW, 28, 'Total Signals', fmtN(totIcp), unattr > 0 ? `incl. ${unattr} unattributed` : 'All sources')
+  kpiBlock(doc, 14 + kpiW + 5, y, kpiW, 28, 'Companies Reached', topComp.length.toString(), topComp[0] ? `Top: ${topComp[0][0]}` : '–')
+  kpiBlock(doc, 14 + (kpiW + 5) * 2, y, kpiW, 28, 'Top Company', topComp[0]?.[0] ?? '–', topComp[0] ? `${topComp[0][1]} signals` : '–')
+  y += 36
+
+  // Two tables side by side
+  const halfW = (PW - 28 - 8) / 2
+
+  // Left: Top Companies
+  sectionLabel(doc, 14, y, 'Top Companies')
+  const compTableY = y + 3
+
+  autoTable(doc, {
+    startY: compTableY,
+    head: [['Company', 'Signals']],
+    body: topComp.slice(0, 8).map(([c, n]) => [c, n.toString()]),
+    headStyles: { fillColor: BRAND, textColor: WHITE, fontSize: 7, fontStyle: 'bold', cellPadding: 2.5 },
+    bodyStyles: { fontSize: 7.5, textColor: DARK, cellPadding: 2.5 },
+    alternateRowStyles: { fillColor: BG },
+    styles: { lineWidth: 0 },
+    margin: { left: 14, right: PW - 14 - halfW },
+    tableWidth: halfW,
+  })
+
+  // Right: ICP Leaderboard
+  sectionLabel(doc, 14 + halfW + 8, y, 'ICP by Member')
+
+  autoTable(doc, {
+    startY: compTableY,
+    head: [['Member', 'Signals', 'Companies']],
+    body: icpRows.map(r => [r.name, r.total.toString(), r.comps.toString()]),
+    headStyles: { fillColor: BRAND, textColor: WHITE, fontSize: 7, fontStyle: 'bold', cellPadding: 2.5 },
+    bodyStyles: { fontSize: 7.5, textColor: DARK, cellPadding: 2.5 },
+    alternateRowStyles: { fillColor: BG },
+    styles: { lineWidth: 0 },
+    margin: { left: 14 + halfW + 8, right: 14 },
+    tableWidth: halfW,
+  })
+
+  // Footer
+  doc.setDrawColor(...RULE)
+  doc.line(14, PH - 10, PW - 14, PH - 10)
+  doc.addImage(iconImg, 'PNG', 14, PH - 8.5, 4.5, 4.5)
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(6.5)
+  doc.setTextColor(...GRAY)
+  doc.text('notus', 20, PH - 5.2)
+  doc.text(`2`, PW - 14, PH - 5.2, { align: 'right' })
+}
+
+// ─── Main ───────────────────────────────────────────────────────────────────
 
 export async function generateReport(data: ReportData): Promise<void> {
-  const computed = computeReportData(data)
-  const { rows, totalImpressions, totalPosts, totalFollowers, totalIcp, teamAvgPerPost, unattributedIcp, impressionsTrend, topCompanies, icpRows, periodLabel } = computed
-  const hasIcp = totalIcp > 0
+  const c = compute(data)
+  const hasIcp = c.totIcp > 0
+
+  // Render logos
+  const logoWhiteSvg = LOGO_SVG.replace('FILLCOLOR', '#FFFFFF')
+  const logoWhite = await svgToImage(logoWhiteSvg, 413, 109)
+  const iconImg = await svgToImage(ICON_SVG, 79, 79)
 
   const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' })
 
-  // Page 1: Cover
-  buildCoverPage(doc, data.orgName, periodLabel)
+  // Page 1: Performance Overview
+  await buildPage1(doc, data.orgName, c.period, logoWhite, iconImg,
+    c.totImp, c.totPosts, c.totFol, c.totIcp, c.unattr,
+    c.rows, c.trendReversed, hasIcp)
 
-  // Page 2: Executive Summary
-  doc.addPage()
-  buildExecutiveSummary(doc, data.orgName, periodLabel, totalImpressions, totalPosts, totalFollowers, totalIcp, teamAvgPerPost, rows, topCompanies, unattributedIcp)
-
-  // Page 3: Content Leaderboard
-  doc.addPage()
-  buildLeaderboard(doc, data.orgName, periodLabel, rows, hasIcp)
-
-  // Page 4: Impressions Trend
-  if (impressionsTrend.length > 0) {
-    doc.addPage()
-    buildImpressionsTrend(doc, data.orgName, impressionsTrend)
-  }
-
-  // Page 5: ICP Pipeline (only if data exists)
+  // Page 2: ICP Pipeline (only if data)
   if (hasIcp) {
     doc.addPage()
-    buildIcpPipeline(doc, data.orgName, totalIcp, topCompanies, icpRows, unattributedIcp)
+    buildPage2(doc, data.orgName, iconImg, c.totIcp, c.topComp, c.icpRows, c.unattr, hasIcp ? 2 : 1)
   }
 
-  // Page 6: Back Cover
-  doc.addPage()
-  buildBackCover(doc)
-
-  // Fill in page numbers retroactively
-  const totalPages = doc.getNumberOfPages()
-  for (let i = 2; i <= totalPages - 1; i++) { // skip cover and back cover
-    doc.setPage(i)
-    doc.setFont('helvetica', 'normal')
-    doc.setFontSize(7)
-    doc.setTextColor(...LIGHT_GRAY)
-    doc.text(`${i - 1} / ${totalPages - 2}`, PW - 12, PH - 8, { align: 'right' })
-  }
-
-  // Download
   const slug = data.orgName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
-  const periodSlug = data.selectedMonth === 'all' ? 'all-time' : data.selectedMonth
-  doc.save(`${slug}-linkedin-report-${periodSlug}.pdf`)
+  const ps = data.selectedMonth === 'all' ? 'all-time' : data.selectedMonth
+  doc.save(`${slug}-linkedin-report-${ps}.pdf`)
 }
