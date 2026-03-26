@@ -202,9 +202,9 @@ function kpiBlock(doc: jsPDF, x: number, y: number, w: number, h: number, label:
 
   // Label
   doc.setFont('helvetica', 'normal')
-  doc.setFontSize(6.5)
+  doc.setFontSize(7.5)
   doc.setTextColor(...GRAY)
-  doc.text(label.toUpperCase(), x + 5, y + 7)
+  doc.text(label.toUpperCase(), x + 5, y + 8)
 
   // Value
   doc.setFont('helvetica', 'bold')
@@ -214,14 +214,14 @@ function kpiBlock(doc: jsPDF, x: number, y: number, w: number, h: number, label:
 
   // Sub
   doc.setFont('helvetica', 'normal')
-  doc.setFontSize(7)
+  doc.setFontSize(8)
   doc.setTextColor(...GRAY)
-  doc.text(sub, x + 5, y + 26)
+  doc.text(sub, x + 5, y + 27)
 }
 
 function sectionLabel(doc: jsPDF, x: number, y: number, text: string) {
   doc.setFont('helvetica', 'bold')
-  doc.setFontSize(8)
+  doc.setFontSize(9)
   doc.setTextColor(...BRAND)
   doc.text(text.toUpperCase(), x, y)
 }
@@ -307,12 +307,12 @@ async function buildPage1(
     head: [head],
     body,
     headStyles: {
-      fillColor: BRAND, textColor: WHITE, fontSize: 7, fontStyle: 'bold',
-      cellPadding: { top: 3, bottom: 3, left: 4, right: 4 },
+      fillColor: BRAND, textColor: WHITE, fontSize: 8, fontStyle: 'bold',
+      cellPadding: { top: 3.5, bottom: 3.5, left: 4, right: 4 },
     },
     bodyStyles: {
-      fontSize: 8, textColor: MID,
-      cellPadding: { top: 4, bottom: 4, left: 4, right: 4 },
+      fontSize: 9, textColor: MID,
+      cellPadding: { top: 4.5, bottom: 4.5, left: 4, right: 4 },
     },
     alternateRowStyles: { fillColor: BG },
     columnStyles: {
@@ -348,8 +348,8 @@ async function buildPage1(
     const barStartX = 52 // more room for month labels
     const valueX = PW - 14
     const barMax = valueX - barStartX - 16
-    const barH = 6
-    const rowH = barH + 3
+    const barH = 8
+    const rowH = barH + 4
 
     // Only show as many as fit
     const available = PH - y - 12
@@ -359,17 +359,17 @@ async function buildPage1(
     for (const pt of shown) {
       const bw = maxVal > 0 ? (pt.imp / maxVal) * barMax : 0
       doc.setFont('helvetica', 'normal')
-      doc.setFontSize(8)
+      doc.setFontSize(9)
       doc.setTextColor(...MID)
-      doc.text(monthLabel(pt.date), labelX, y + 4.5)
+      doc.text(monthLabel(pt.date), labelX, y + 5.5)
       if (bw > 0.5) {
         doc.setFillColor(...BRAND)
-        doc.roundedRect(barStartX, y, bw, barH, 1.5, 1.5, 'F')
+        doc.roundedRect(barStartX, y, bw, barH, 2, 2, 'F')
       }
       doc.setFont('helvetica', 'bold')
-      doc.setFontSize(8.5)
+      doc.setFontSize(9.5)
       doc.setTextColor(...DARK)
-      doc.text(fmtN(pt.imp), valueX, y + 4.5, { align: 'right' })
+      doc.text(fmtN(pt.imp), valueX, y + 5.5, { align: 'right' })
       y += rowH
     }
   }
@@ -429,8 +429,8 @@ function buildPage2(
     startY: compTableY,
     head: [['Company', 'Signals']],
     body: topComp.slice(0, 8).map(([c, n]) => [c, n.toString()]),
-    headStyles: { fillColor: BRAND, textColor: WHITE, fontSize: 7, fontStyle: 'bold', cellPadding: 2.5 },
-    bodyStyles: { fontSize: 7.5, textColor: MID, cellPadding: 2.5 },
+    headStyles: { fillColor: BRAND, textColor: WHITE, fontSize: 8, fontStyle: 'bold', cellPadding: 3 },
+    bodyStyles: { fontSize: 8.5, textColor: MID, cellPadding: 3 },
     alternateRowStyles: { fillColor: BG },
     styles: { lineWidth: 0 },
     margin: { left: 14, right: PW - 14 - halfW },
@@ -444,8 +444,8 @@ function buildPage2(
     startY: compTableY,
     head: [['Member', 'Signals', 'Companies']],
     body: icpRows.map(r => [r.name, r.total.toString(), r.comps.toString()]),
-    headStyles: { fillColor: BRAND, textColor: WHITE, fontSize: 7, fontStyle: 'bold', cellPadding: 2.5 },
-    bodyStyles: { fontSize: 7.5, textColor: MID, cellPadding: 2.5 },
+    headStyles: { fillColor: BRAND, textColor: WHITE, fontSize: 8, fontStyle: 'bold', cellPadding: 3 },
+    bodyStyles: { fontSize: 8.5, textColor: MID, cellPadding: 3 },
     alternateRowStyles: { fillColor: BG },
     styles: { lineWidth: 0 },
     margin: { left: 14 + halfW + 8, right: 14 },
@@ -598,8 +598,8 @@ function buildMemberPage(
         if (showIcpCol) row.push(d.icp > 0 ? d.icp.toString() : '–')
         return row
       }),
-      headStyles: { fillColor: BRAND, textColor: WHITE, fontSize: 7, fontStyle: 'bold', cellPadding: 2.5 },
-      bodyStyles: { fontSize: 7.5, textColor: MID, cellPadding: 2.5 },
+      headStyles: { fillColor: BRAND, textColor: WHITE, fontSize: 8, fontStyle: 'bold', cellPadding: 3 },
+      bodyStyles: { fontSize: 8.5, textColor: MID, cellPadding: 3 },
       alternateRowStyles: { fillColor: BG },
       styles: { lineWidth: 0 },
       margin: { left: 14, right: PW - 14 - colW },
@@ -636,7 +636,7 @@ function buildMemberPage(
       const pct = g.goal > 0 ? Math.min(100, (g.current / g.goal) * 100) : 0
 
       doc.setFont('helvetica', 'normal')
-      doc.setFontSize(7)
+      doc.setFontSize(8)
       doc.setTextColor(...MID)
       doc.text(g.label, rightX, gy)
       doc.text(`${fmtN(g.current)} / ${fmtN(g.goal)}`, rightX + colW - 2, gy, { align: 'right' })
@@ -661,42 +661,14 @@ function buildMemberPage(
     doc.text(`Goals for ${monthLabel(latestMonth)}`, rightX, gy)
     gy += 8
 
-    // Insights
-    const insights: string[] = []
-    if (avgPerPost >= BENCHMARKS.top10PerPost) insights.push(`${fmtN(avgPerPost)} impressions/post — top 10% of all creators tracked by notus.`)
-    else if (avgPerPost >= BENCHMARKS.top25PerPost) insights.push(`${fmtN(avgPerPost)} impressions/post — above the top 25% benchmark (${fmtN(BENCHMARKS.top25PerPost)}).`)
-    else if (avgPerPost > 0) insights.push(`${fmtN(avgPerPost)} impressions/post — below the top 25% threshold (${fmtN(BENCHMARKS.top25PerPost)}).`)
-
-    if (mf >= BENCHMARKS.top25MonthlyFollowers) insights.push(`+${fmtN(mf)} followers exceeds the top 25% benchmark (+${BENCHMARKS.top25MonthlyFollowers}/month).`)
-    if (avgEng >= BENCHMARKS.top25EngRate) insights.push(`${fmtPct(avgEng)} engagement rate — above benchmark (${BENCHMARKS.top25EngRate}%).`)
-
-    const topPost = mp.reduce<Post | null>((top, p) => (!top || p.impressions > top.impressions) ? p : top, null)
-    if (topPost && avgPerPost > 0 && topPost.impressions > avgPerPost * 1.5) {
-      insights.push(`Top post: ${fmtN(topPost.impressions)} impressions (${(topPost.impressions / avgPerPost).toFixed(1)}x above average).`)
-    }
-
+    // ICP summary (if applicable)
     if (icpTotal > 0) {
       const allMemberIcp = [...mIcp, ...attOrg]
       const companies = new Set(allMemberIcp.map(s => s.company).filter(Boolean))
-      insights.push(`${icpTotal} ICP signals total — ${companies.size} companies reached.`)
-      const confirmed = mIcp.filter(s => s.isIcp).length
-      if (confirmed > 0) insights.push(`${confirmed} confirmed ICP match${confirmed > 1 ? 'es' : ''} — real pipeline opportunities.`)
-    }
-
-    if (insights.length > 0) {
-      sectionLabel(doc, rightX, gy, 'Insights')
-      gy += 4
-
       doc.setFont('helvetica', 'normal')
-      doc.setFontSize(7)
-      doc.setTextColor(...DARK)
-      for (const ins of insights) {
-        doc.setFillColor(...BRAND)
-        doc.circle(rightX + 2, gy + 0.5, 0.8, 'F')
-        const lines = doc.splitTextToSize(ins, colW - 8)
-        doc.text(lines, rightX + 6, gy + 1.5)
-        gy += lines.length * 3.5 + 2
-      }
+      doc.setFontSize(8)
+      doc.setTextColor(...MID)
+      doc.text(`${icpTotal} ICP signals · ${companies.size} companies reached`, rightX, gy)
     }
   }
 
